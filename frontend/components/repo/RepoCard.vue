@@ -1,0 +1,40 @@
+<template>
+  <NuxtLink :to="`/${repo.owner.username}/${repo.slug}`" class="card p-4 hover:border-surface-3 transition-colors block">
+    <!-- Header -->
+    <div class="flex items-start justify-between gap-2 mb-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <Icon name="mdi:source-repository" class="w-4 h-4 text-accent-2 shrink-0" />
+        <span class="font-medium text-sm truncate">
+          <span class="text-muted">{{ repo.owner.username }}</span>
+          <span class="text-muted">/</span>
+          <span class="text-accent-2">{{ repo.name }}</span>
+        </span>
+      </div>
+      <VerificationBadge :status="repo.verification_status" />
+    </div>
+
+    <!-- Description -->
+    <p v-if="repo.description" class="text-xs text-muted line-clamp-2 mb-3">{{ repo.description }}</p>
+    <p v-else class="text-xs text-surface-3 italic mb-3">No description</p>
+
+    <!-- Warning banner for unverified -->
+    <div v-if="repo.verification_status === 'unverified'" class="flex items-center gap-1.5 text-xs text-warning bg-warning/5 border border-warning/20 rounded px-2 py-1.5 mb-3">
+      <Icon name="mdi:alert-outline" class="w-3.5 h-3.5 shrink-0" />
+      Download at your own risk — unverified repository
+    </div>
+
+    <!-- Stats -->
+    <div class="flex items-center gap-4 text-xs text-muted font-mono">
+      <span class="flex items-center gap-1"><Icon name="mdi:file-multiple-outline" class="w-3.5 h-3.5" />{{ repo.file_count }} files</span>
+      <span class="flex items-center gap-1"><Icon name="mdi:download-outline" class="w-3.5 h-3.5" />{{ repo.download_count.toLocaleString() }}</span>
+      <span class="flex items-center gap-1"><Icon name="mdi:database-outline" class="w-3.5 h-3.5" />{{ formatBytes(repo.total_size) }}</span>
+      <span class="ml-auto">{{ formatRelative(repo.updated_at) }}</span>
+    </div>
+  </NuxtLink>
+</template>
+
+<script setup lang="ts">
+import { formatBytes, formatRelative } from '~/utils/format'
+import type { Repo } from '~/types'
+defineProps<{ repo: Repo }>()
+</script>

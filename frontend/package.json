@@ -1,0 +1,24 @@
+{
+  "name": "downloadino-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev --port 3000",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "nuxt": "^3.11.0",
+    "@nuxtjs/tailwindcss": "^6.11.4",
+    "@pinia/nuxt": "^0.5.1",
+    "pinia": "^2.1.7",
+    "@vueuse/nuxt": "^10.9.0",
+    "@vueuse/core": "^10.9.0",
+    "@nuxt/icon": "^1.2.0",
+    "@nuxtjs/color-mode": "^3.4.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38"
+  }
+}

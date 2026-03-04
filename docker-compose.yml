@@ -1,30 +1,84 @@
-version: '3.8'
+version: "3.9"
 
 services:
+
+  api:
+    build: ./backend
+    container_name: downloadino_api
+    restart: unless-stopped
+    env_file: ./backend/.env
+    volumes:
+      - file_data:/data/files
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - downloadino_net
+
+  frontend:
+    build: ./frontend
+    container_name: downloadino_frontend
+    restart: unless-stopped
+    environment:
+      - NUXT_PUBLIC_API_BASE=https://api.downloadino.com
+    networks:
+      - downloadino_net
+
   db:
-    image: postgres:15-alpine
-    restart: always
-    env_file:
-      - .env  # Injects POSTGRES_USER and POSTGRES_PASSWORD here
+    image: postgres:16-alpine
+    container_name: downloadino_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: downloadino
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: downloadino
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U downloadino"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - downloadino_net
 
   redis:
     image: redis:7-alpine
-    restart: always
+    container_name: downloadino_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redispass}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - downloadino_net
 
-  backend:
-    build: ./backend
-    # PRODUCTION: 4 Workers, binding to 0.0.0.0
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
-    restart: always
+  nginx:
+    build: ./nginx
+    container_name: downloadino_nginx
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - db
-      - redis
-    env_file:
-      - .env  # Automatically passes S3 keys, DB URLs, etc., for Pydantic to read
+      - api
+      - frontend
+    networks:
+      - downloadino_net
 
 volumes:
   postgres_data:
+  redis_data:
+  file_data:
+
+networks:
+  downloadino_net:
+    driver: bridge
