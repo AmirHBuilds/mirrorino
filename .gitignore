@@ -1,0 +1,8 @@
+# Local environment files
+.env
+backend/.env
+frontend/.env
+
+# Dependency/build outputs
+frontend/node_modules/
+frontend/.nuxt/
