@@ -3,10 +3,10 @@ version: "3.9"
 services:
 
   api:
-    build: ./backend
+    image: voidtrek/downloadino_backend:latest
     container_name: downloadino_api
     restart: unless-stopped
-    env_file: ./backend/.env
+    env_file: ./.env
     volumes:
       - file_data:/data/files
     depends_on:
@@ -18,11 +18,11 @@ services:
       - downloadino_net
 
   frontend:
-    build: ./frontend
+    image: voidtrek/downloadino_frontend:latest
     container_name: downloadino_frontend
     restart: unless-stopped
     environment:
-      - NUXT_PUBLIC_API_BASE=https://api.downloadino.com
+      - NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-https://api.downloadino.com}
     networks:
       - downloadino_net
 
@@ -60,7 +60,7 @@ services:
       - downloadino_net
 
   nginx:
-    build: ./nginx
+    image: voidtrek/downloadino_nginx:latest
     container_name: downloadino_nginx
     restart: unless-stopped
     ports:
