@@ -13,6 +13,7 @@ class User(Base):
     role = Column(String, default="USER") # USER, ADMIN, SUPERADMIN
     storage_used = Column(BigInteger, default=0)
     storage_limit = Column(BigInteger, default=104857600) # 100 MB in bytes
+    is_banned = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Repository(Base):

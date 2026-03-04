@@ -3,9 +3,11 @@ uvicorn
 sqlalchemy
 psycopg2-binary
 python-multipart
-python-jose[cryptography]
+PyJWT
 passlib[bcrypt]
 boto3
 python-magic
 slowapi
 redis
+limits
+pydantic-settings
