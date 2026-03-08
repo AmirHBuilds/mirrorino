@@ -2,22 +2,52 @@
   <div>
     <!-- Most downloaded repos (top) -->
     <section class="max-w-7xl mx-auto px-4 py-8">
-      <div class="card p-6 mb-8 border-accent/20 bg-gradient-to-b from-accent/10 to-transparent">
+      <div class="card p-6 mb-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <p class="text-xs font-mono uppercase tracking-wider text-muted">Top of Downloadino</p>
-            <h2 class="text-2xl font-semibold">Most downloaded repositories</h2>
+            <h2 class="text-2xl font-semibold mt-1">Most downloaded repositories</h2>
+            <p class="text-sm text-muted mt-1">Public repositories ranked by downloads.</p>
           </div>
-          <NuxtLink to="/explore" class="btn-primary text-sm py-1.5">Explore all repos</NuxtLink>
+          <NuxtLink to="/explore" class="btn-secondary text-sm py-1.5 px-3">Explore all repos</NuxtLink>
         </div>
-        <p class="text-sm text-muted">Discover what users download the most right now.</p>
       </div>
 
       <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
         <div v-for="i in 6" :key="i" class="card p-4 animate-pulse h-32"></div>
       </div>
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-        <RepoCard v-for="repo in repos" :key="repo.id" :repo="repo" />
+      <div v-else class="space-y-4 mb-10">
+        <NuxtLink
+          v-if="featuredRepo"
+          :to="`/${featuredRepo.owner.username}/${featuredRepo.slug}`"
+          class="card block p-5 hover:border-surface-3 transition-colors"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-xs font-mono text-accent-2 mb-1">#1 Most Downloaded</p>
+              <h3 class="text-lg font-semibold truncate">{{ featuredRepo.owner.username }}/{{ featuredRepo.name }}</h3>
+              <p v-if="featuredRepo.description" class="text-sm text-muted mt-1 line-clamp-2">{{ featuredRepo.description }}</p>
+            </div>
+            <div class="text-right shrink-0">
+              <p class="text-xs text-muted font-mono">Downloads</p>
+              <p class="text-xl font-semibold">{{ featuredRepo.download_count.toLocaleString() }}</p>
+            </div>
+          </div>
+        </NuxtLink>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <NuxtLink
+            v-for="(repo, index) in nextTopRepos"
+            :key="repo.id"
+            :to="`/${repo.owner.username}/${repo.slug}`"
+            class="card p-3 hover:border-surface-3 transition-colors"
+          >
+            <p class="text-xs font-mono text-accent-2 mb-1">#{{ index + 2 }}</p>
+            <p class="text-sm font-medium truncate">{{ repo.name }}</p>
+            <p class="text-xs text-muted truncate">{{ repo.owner.username }}</p>
+            <p class="text-xs mt-2 font-mono text-muted">{{ repo.download_count.toLocaleString() }} downloads</p>
+          </NuxtLink>
+        </div>
       </div>
     </section>
 
@@ -66,4 +96,7 @@ const { data: repos, pending } = await useAsyncData(
   () => get<Repo[]>('/api/repos/?limit=6&sort=downloads'),
   { server: false, default: () => [] },
 )
+
+const featuredRepo = computed(() => repos.value?.[0] || null)
+const nextTopRepos = computed(() => (repos.value || []).slice(1, 6))
 </script>
