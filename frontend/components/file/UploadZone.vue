@@ -6,6 +6,7 @@
       @dragenter="isDragging=true" @dragleave="isDragging=false">
       <Icon name="mdi:cloud-upload-outline" class="w-10 h-10 text-muted mx-auto mb-3" />
       <p class="text-sm text-fg mb-1">Drop files here or <span class="text-accent-2">browse</span></p>
+      <button type="button" @click.stop="inputRef?.click()" class="btn-secondary text-xs mt-3">Select files</button>
       <p class="text-xs text-muted">Max 500MB per file · Executables blocked</p>
       <input ref="inputRef" type="file" multiple class="hidden" @change="onSelect" />
     </div>
@@ -47,8 +48,10 @@ function onDrop(e: DragEvent) {
 }
 
 function onSelect(e: Event) {
-  const files = Array.from((e.target as HTMLInputElement).files || [])
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
   uploadAll(files)
+  input.value = ""
 }
 
 async function uploadAll(files: File[]) {
