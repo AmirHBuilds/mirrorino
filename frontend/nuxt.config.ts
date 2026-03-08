@@ -1,5 +1,6 @@
 export default defineNuxtConfig({
   devtools: { enabled: false },
+  components: [{ path: '~/components', pathPrefix: false }],
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
@@ -12,6 +13,7 @@ export default defineNuxtConfig({
     fallback: 'dark',
     classSuffix: '',
   },
+  css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://api.downloadino.com',
@@ -19,6 +21,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
+      htmlAttrs: { class: 'dark' },
       titleTemplate: '%s — Downloadino',
       link: [
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
