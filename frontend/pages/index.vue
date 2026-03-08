@@ -1,7 +1,28 @@
 <template>
   <div>
+    <!-- Most downloaded repos (top) -->
+    <section class="max-w-7xl mx-auto px-4 py-8">
+      <div class="card p-6 mb-8 border-accent/20 bg-gradient-to-b from-accent/10 to-transparent">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <p class="text-xs font-mono uppercase tracking-wider text-muted">Top of Downloadino</p>
+            <h2 class="text-2xl font-semibold">Most downloaded repositories</h2>
+          </div>
+          <NuxtLink to="/explore" class="btn-primary text-sm py-1.5">Explore all repos</NuxtLink>
+        </div>
+        <p class="text-sm text-muted">Discover what users download the most right now.</p>
+      </div>
+
+      <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+        <div v-for="i in 6" :key="i" class="card p-4 animate-pulse h-32"></div>
+      </div>
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+        <RepoCard v-for="repo in repos" :key="repo.id" :repo="repo" />
+      </div>
+    </section>
+
     <!-- Hero -->
-    <section class="border-b border-border py-20">
+    <section class="border-y border-border py-20">
       <div class="max-w-4xl mx-auto px-4 text-center">
         <div class="inline-flex items-center gap-2 text-xs font-mono text-muted bg-surface-1 border border-border rounded-full px-3 py-1 mb-8">
           <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
@@ -33,19 +54,6 @@
       </div>
     </section>
 
-    <!-- Recent repos -->
-    <section class="max-w-7xl mx-auto px-4 py-12">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-lg font-semibold">Recent repositories</h2>
-        <NuxtLink to="/explore" class="text-sm text-accent-2 hover:underline">View all →</NuxtLink>
-      </div>
-      <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="i in 6" :key="i" class="card p-4 animate-pulse h-32"></div>
-      </div>
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <RepoCard v-for="repo in repos" :key="repo.id" :repo="repo" />
-      </div>
-    </section>
   </div>
 </template>
 
@@ -53,5 +61,9 @@
 import type { Repo } from '~/types'
 useSeoMeta({ title: 'Home' })
 const { get } = useApi()
-const { data: repos, pending } = await useAsyncData('home-repos', () => get<Repo[]>('/api/repos/?limit=6'))
+const { data: repos, pending } = await useAsyncData(
+  'home-repos',
+  () => get<Repo[]>('/api/repos/?limit=6&sort=downloads'),
+  { server: false, default: () => [] },
+)
 </script>

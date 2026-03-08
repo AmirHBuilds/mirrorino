@@ -17,6 +17,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://api.downloadino.com',
+      supportEmail: process.env.NUXT_PUBLIC_SUPPORT_EMAIL || '',
+      supportTelegramId: process.env.NUXT_PUBLIC_SUPPORT_TELEGRAM_ID || '',
+      supportWebsite: process.env.NUXT_PUBLIC_SUPPORT_WEBSITE || '',
     },
   },
   app: {

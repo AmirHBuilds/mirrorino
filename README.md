@@ -36,6 +36,16 @@ So on your server, you only need:
 
 No per-service `.env` files are required.
 
+### Contact details configuration
+
+Set these values in your root `.env` file to populate `/contact` page details:
+
+```env
+NUXT_PUBLIC_SUPPORT_EMAIL=support@downloadino.com
+NUXT_PUBLIC_SUPPORT_TELEGRAM_ID=@downloadino_support
+NUXT_PUBLIC_SUPPORT_WEBSITE=https://downloadino.com
+```
+
 ## Build and push images to Docker Hub
 
 Run these commands from project root on your own machine:

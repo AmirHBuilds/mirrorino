@@ -52,7 +52,11 @@ import type { Ad } from '~/types'
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Admin · Ads' })
 const { get, post, put, delete: del } = useApi()
-const { data: ads, refresh } = await useAsyncData('admin-ads', () => get<Ad[]>('/api/admin/ads'))
+const { data: ads, refresh } = await useAsyncData(
+  'admin-ads',
+  () => get<Ad[]>('/api/admin/ads'),
+  { server: false, default: () => [] },
+)
 const showCreate = ref(false)
 const form = reactive({ title: '', image_url: '', target_url: '', position: 'sidebar', is_active: true })
 async function createAd() {
