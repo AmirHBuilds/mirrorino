@@ -6,13 +6,11 @@
       <div class="card h-48"></div>
     </div>
     <template v-else-if="repo">
-      <!-- Unverified warning -->
       <div v-if="repo.verification_status === 'unverified'" class="flex items-start gap-3 bg-warning/5 border border-warning/30 rounded-lg px-4 py-3 mb-6 text-sm text-warning">
         <Icon name="mdi:alert" class="w-5 h-5 shrink-0 mt-0.5" />
         <span><strong>Unverified repository.</strong> Not reviewed by admins. Download at your own risk.</span>
       </div>
 
-      <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <div class="flex flex-wrap items-center gap-2 text-sm mb-2">
@@ -37,7 +35,6 @@
         </div>
       </div>
 
-      <!-- Stats -->
       <div class="flex flex-wrap gap-5 text-xs text-muted font-mono mb-6 border-b border-border pb-4">
         <span class="flex items-center gap-1.5"><Icon name="mdi:file-multiple-outline" class="w-4 h-4" />{{ repo.file_count }} files</span>
         <span class="flex items-center gap-1.5"><Icon name="mdi:download-outline" class="w-4 h-4" />{{ repo.download_count.toLocaleString() }}</span>
@@ -45,18 +42,6 @@
         <span class="ml-auto flex items-center gap-1.5"><Icon name="mdi:clock-outline" class="w-4 h-4" />{{ formatRelative(repo.updated_at) }}</span>
       </div>
 
-      <!-- Raw install helper -->
-      <div class="card p-4 mb-6">
-        <p class="text-xs text-muted font-mono uppercase tracking-wider mb-2">Raw install command</p>
-        <div class="font-mono text-xs bg-surface-2 rounded p-3 flex items-center gap-2 overflow-x-auto">
-          <span class="flex-1">bash &lt;(curl -Ls https://api.downloadino.com/raw/{{ repo.owner.username }}/{{ repo.slug }}/install.sh)</span>
-          <button @click="copy" class="shrink-0 text-muted hover:text-fg transition-colors ml-2">
-            <Icon :name="copied ? 'mdi:check' : 'mdi:content-copy'" class="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <!-- Files list -->
       <div class="card overflow-hidden">
         <div class="px-4 py-3 border-b border-border flex items-center justify-between">
           <span class="text-sm font-semibold">Files</span>
@@ -70,6 +55,11 @@
           <FileRow v-for="file in files" :key="file.id" :file="file" :can-delete="isOwner" @delete="onDeleteFile" />
         </div>
       </div>
+
+      <div v-if="readmeContent" class="card p-4 mt-6">
+        <p class="text-xs text-muted font-mono uppercase tracking-wider mb-3">README.md</p>
+        <pre class="text-sm whitespace-pre-wrap break-words font-mono text-fg">{{ readmeContent }}</pre>
+      </div>
     </template>
     <div v-else class="text-center py-24 text-muted">Repository not found</div>
   </div>
@@ -79,14 +69,14 @@
 import { formatBytes, formatRelative } from '~/utils/format'
 import type { Repo, RepoFile } from '~/types'
 
-const route  = useRoute()
+const route = useRoute()
 const { get, post, delete: del } = useApi()
+const apiBase = useRuntimeConfig().public.apiBase
 const { user, isLoggedIn } = useAuth()
-const copied = ref(false)
 
 const { data: repo, pending, refresh: refreshRepo } = await useAsyncData('repo-detail', async () => {
   const list = await get<Repo[]>(`/api/repos/?q=${route.params.slug}&limit=50`)
-  return list.find(r => r.slug === route.params.slug && r.owner.username === route.params.username) ?? null
+  return list.find((r) => r.slug === route.params.slug && r.owner.username === route.params.username) ?? null
 })
 
 const { data: files, refresh: refreshFiles } = await useAsyncData('repo-files', async () => {
@@ -94,16 +84,25 @@ const { data: files, refresh: refreshFiles } = await useAsyncData('repo-files', 
   return get<RepoFile[]>(`/api/repos/${repo.value.id}/files`)
 })
 
-const isOwner = computed(() => isLoggedIn.value && user.value?.username === route.params.username)
+const isOwner = computed(() => isLoggedIn.value && !!repo.value && user.value?.id === repo.value.owner.id)
 
-async function copy() {
-  await navigator.clipboard.writeText(`bash <(curl -Ls https://api.downloadino.com/raw/${repo.value?.owner.username}/${repo.value?.slug}/install.sh)`)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 2000)
-}
+const readmeFile = computed(() => files.value?.find((file) => file.original_name.toLowerCase() === 'readme.md') ?? null)
+
+const { data: readmeContent } = await useAsyncData(
+  'repo-readme',
+  async () => {
+    if (!repo.value || !readmeFile.value) return null
+    const res = await fetch(`${apiBase}/raw/${repo.value.owner.username}/${repo.value.slug}/${encodeURIComponent(readmeFile.value.original_name)}`)
+    if (!res.ok) return null
+    return await res.text()
+  },
+  { watch: [repo, readmeFile] },
+)
 
 async function requestVerify() {
-  try { await post(`/api/repos/${repo.value?.id}/request-verification`, {}) } catch {}
+  try {
+    await post(`/api/repos/${repo.value?.id}/request-verification`, {})
+  } catch {}
   await refreshRepo()
 }
 
