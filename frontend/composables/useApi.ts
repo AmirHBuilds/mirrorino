@@ -1,9 +1,10 @@
 export function useApi() {
   const config = useRuntimeConfig()
   const base = config.public.apiBase
+  const tokenCookie = useCookie<string | null>('token')
 
   async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const token = localStorage.getItem('token')
+    const token = tokenCookie.value || (process.client ? localStorage.getItem('token') : null)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string> || {}),
@@ -27,7 +28,7 @@ export function useApi() {
 
     uploadFile: async <T>(path: string, formData: FormData, onProgress?: (pct: number) => void): Promise<T> => {
       return new Promise((resolve, reject) => {
-        const token = localStorage.getItem('token')
+        const token = tokenCookie.value || localStorage.getItem('token')
         const xhr = new XMLHttpRequest()
         xhr.open('POST', `${base}${path}`)
         if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)

@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-3xl mx-auto px-4 py-8">
-    <NuxtLink to="/user/repos" class="flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors">
+    <NuxtLink :to="`/${username}/repos`" class="flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors">
       <Icon name="mdi:arrow-left" class="w-4 h-4" /> Back to repositories
     </NuxtLink>
 

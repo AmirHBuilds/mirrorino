@@ -41,7 +41,7 @@
 
 <script setup lang="ts">
 useSeoMeta({ title: 'Sign in' })
-const { login } = useAuth()
+const { login, user } = useAuth()
 const { get, post } = useApi()
 
 const form  = reactive({ username: '', password: '', captcha_id: '', captcha_answer: '' })
@@ -60,7 +60,7 @@ async function submit() {
   try {
     const res = await post<{ access_token: string }>('/api/auth/login', { ...form })
     await login(res.access_token)
-    navigateTo('/user/repos')
+    navigateTo(`/${user.value?.username || form.username}/repos`)
   } catch (e: any) {
     error.value = e.message
     await loadCaptcha()

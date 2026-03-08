@@ -45,6 +45,32 @@ async def list_my_repos(db: AsyncSession = Depends(get_db), current_user: User =
     )
     return [await _enrich(r, db) for r in result.scalars().all()]
 
+
+@router.get("/users/{username}", response_model=list[RepoResponse])
+async def list_user_public_repos(username: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Repo)
+        .options(selectinload(Repo.owner))
+        .join(User, Repo.owner_id == User.id)
+        .where(User.username == username, Repo.is_public == True)
+        .order_by(Repo.created_at.desc())
+    )
+    return [await _enrich(r, db) for r in result.scalars().all()]
+
+
+@router.get("/users/{username}/{repo_slug}", response_model=RepoResponse)
+async def get_repo_by_identity(username: str, repo_slug: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Repo)
+        .options(selectinload(Repo.owner))
+        .join(User, Repo.owner_id == User.id)
+        .where(User.username == username, Repo.slug == repo_slug, Repo.is_public == True)
+    )
+    repo = result.scalar_one_or_none()
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    return await _enrich(repo, db)
+
 @router.get("/{repo_id}", response_model=RepoResponse)
 async def get_repo(repo_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Repo).options(selectinload(Repo.owner)).where(Repo.id == repo_id, Repo.is_public == True))

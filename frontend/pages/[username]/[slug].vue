@@ -52,13 +52,21 @@
           <p class="text-sm">No files uploaded yet</p>
         </div>
         <div v-else class="divide-y divide-border">
-          <FileRow v-for="file in files" :key="file.id" :file="file" :can-delete="isOwner" @delete="onDeleteFile" />
+          <FileRow
+            v-for="file in files"
+            :key="file.id"
+            :file="file"
+            :repo-username="repo.owner.username"
+            :repo-slug="repo.slug"
+            :can-delete="isOwner"
+            @delete="onDeleteFile"
+          />
         </div>
       </div>
 
       <div v-if="readmeContent" class="card p-4 mt-6">
         <p class="text-xs text-muted font-mono uppercase tracking-wider mb-3">README.md</p>
-        <pre class="text-sm whitespace-pre-wrap break-words font-mono text-fg">{{ readmeContent }}</pre>
+        <div class="markdown-body" v-html="readmeHtml"></div>
       </div>
     </template>
     <div v-else class="text-center py-24 text-muted">Repository not found</div>
@@ -75,8 +83,11 @@ const apiBase = useRuntimeConfig().public.apiBase
 const { user, isLoggedIn } = useAuth()
 
 const { data: repo, pending, refresh: refreshRepo } = await useAsyncData('repo-detail', async () => {
-  const list = await get<Repo[]>(`/api/repos/?q=${route.params.slug}&limit=50`)
-  return list.find((r) => r.slug === route.params.slug && r.owner.username === route.params.username) ?? null
+  try {
+    return await get<Repo>(`/api/repos/users/${route.params.username}/${route.params.slug}`)
+  } catch {
+    return null
+  }
 })
 
 const { data: files, refresh: refreshFiles } = await useAsyncData('repo-files', async () => {
@@ -98,6 +109,41 @@ const { data: readmeContent } = await useAsyncData(
   },
   { watch: [repo, readmeFile] },
 )
+
+function escapeHtml(content: string) {
+  return content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function markdownToHtml(content: string) {
+  const escaped = escapeHtml(content)
+  const blocks = escaped.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean)
+  return blocks.map((block) => {
+    if (block.startsWith('### ')) return `<h3>${block.slice(4)}</h3>`
+    if (block.startsWith('## ')) return `<h2>${block.slice(3)}</h2>`
+    if (block.startsWith('# ')) return `<h1>${block.slice(2)}</h1>`
+    if (block.startsWith('- ')) {
+      const items = block.split('\n').map((line) => `<li>${line.replace(/^-\s+/, '')}</li>`).join('')
+      return `<ul>${items}</ul>`
+    }
+    if (block.startsWith('```') && block.endsWith('```')) {
+      return `<pre><code>${block.slice(3, -3).trim()}</code></pre>`
+    }
+    const withInline = block
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+      .replace(/\n/g, '<br>')
+    return `<p>${withInline}</p>`
+  }).join('')
+}
+
+const readmeHtml = computed(() => (readmeContent.value ? markdownToHtml(readmeContent.value) : ''))
 
 async function requestVerify() {
   try {
