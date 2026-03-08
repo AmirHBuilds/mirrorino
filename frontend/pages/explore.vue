@@ -3,10 +3,6 @@
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
       <h1 class="text-2xl font-bold">Explore repositories</h1>
       <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center">
-        <div class="relative w-full sm:w-72">
-          <Icon name="mdi:magnify" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
-          <input v-model="q" @input="debouncedSearch" placeholder="Search..." class="input pl-9 py-1.5 text-sm" />
-        </div>
         <select v-model="sort" class="input py-1.5 text-sm sm:w-48" @change="refresh">
           <option value="downloads">Most downloaded</option>
           <option value="recent">Recently updated</option>
@@ -32,20 +28,15 @@ import type { Repo } from '~/types'
 useSeoMeta({ title: 'Explore' })
 const route = useRoute()
 const router = useRouter()
-const q = ref((route.query.q as string) || '')
 const sort = ref(((route.query.sort as string) || 'downloads') === 'recent' ? 'recent' : 'downloads')
 const { get } = useApi()
 const { data: repos, pending, refresh } = await useAsyncData(
-  () => `explore:${q.value}:${sort.value}`,
-  () => get<Repo[]>(`/api/repos/?limit=30&sort=${sort.value}${q.value ? `&q=${encodeURIComponent(q.value)}` : ''}`),
+  () => `explore:${sort.value}`,
+  () => get<Repo[]>(`/api/repos/?limit=30&sort=${sort.value}`),
   { server: false, default: () => [] },
 )
-const debouncedSearch = useDebounceFn(() => refresh(), 400)
-
-watch([q, sort], () => {
+watch(sort, () => {
   const query: Record<string, string> = { ...route.query } as Record<string, string>
-  if (q.value) query.q = q.value
-  else delete query.q
   if (sort.value === 'recent') query.sort = 'recent'
   else delete query.sort
   router.replace({ query })

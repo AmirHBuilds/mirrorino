@@ -2,7 +2,7 @@
   <div>
     <!-- Most downloaded repos (top) -->
     <section class="max-w-7xl mx-auto px-4 py-8">
-      <div class="card p-6 mb-6 border-accent/20 bg-gradient-to-r from-surface-1 to-accent/5">
+      <div class="card p-6 mb-6 border border-accent/50 bg-surface-1">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <p class="text-xs font-mono uppercase tracking-wider text-muted">Top of Downloadino</p>
@@ -63,7 +63,7 @@ useSeoMeta({ title: 'Home' })
 const { get } = useApi()
 const { data: repos, pending } = await useAsyncData(
   'home-repos',
-  () => get<Repo[]>('/api/repos/?limit=6&sort=downloads'),
+  () => get<Repo[]>('/api/repos/?limit=3&sort=downloads'),
   { server: false, default: () => [] },
 )
 </script>
