@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
 from app.db.session import get_db
 from app.core.security import get_current_user
@@ -24,9 +24,17 @@ async def _enrich(repo: Repo, db: AsyncSession) -> dict:
 
 @router.get("/", response_model=list[RepoResponse])
 async def list_public_repos(q: str | None = Query(None), page: int = Query(1, ge=1), limit: int = Query(20, ge=1, le=100), db: AsyncSession = Depends(get_db)):
-    query = select(Repo).options(selectinload(Repo.owner)).where(Repo.is_public == True)
+    query = select(Repo).options(selectinload(Repo.owner)).join(User, Repo.owner_id == User.id).where(Repo.is_public == True)
     if q:
-        query = query.where(Repo.name.ilike(f"%{q}%"))
+        like = f"%{q}%"
+        query = query.where(
+            or_(
+                Repo.name.ilike(like),
+                Repo.slug.ilike(like),
+                Repo.description.ilike(like),
+                User.username.ilike(like),
+            )
+        )
     result = await db.execute(query.offset((page - 1) * limit).limit(limit).order_by(Repo.created_at.desc()))
     return [await _enrich(r, db) for r in result.scalars().all()]
 
@@ -44,6 +52,32 @@ async def list_my_repos(db: AsyncSession = Depends(get_db), current_user: User =
         .order_by(Repo.created_at.desc())
     )
     return [await _enrich(r, db) for r in result.scalars().all()]
+
+
+@router.get("/users/{username}", response_model=list[RepoResponse])
+async def list_user_public_repos(username: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Repo)
+        .options(selectinload(Repo.owner))
+        .join(User, Repo.owner_id == User.id)
+        .where(User.username == username, Repo.is_public == True)
+        .order_by(Repo.created_at.desc())
+    )
+    return [await _enrich(r, db) for r in result.scalars().all()]
+
+
+@router.get("/users/{username}/{repo_slug}", response_model=RepoResponse)
+async def get_repo_by_identity(username: str, repo_slug: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Repo)
+        .options(selectinload(Repo.owner))
+        .join(User, Repo.owner_id == User.id)
+        .where(User.username == username, Repo.slug == repo_slug, Repo.is_public == True)
+    )
+    repo = result.scalar_one_or_none()
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    return await _enrich(repo, db)
 
 @router.get("/{repo_id}", response_model=RepoResponse)
 async def get_repo(repo_id: int, db: AsyncSession = Depends(get_db)):

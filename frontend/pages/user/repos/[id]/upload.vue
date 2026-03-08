@@ -28,5 +28,5 @@ await useAsyncData('upload-repo-legacy-redirect', async () => {
 
   await navigateTo(`/user/repos/${repo.owner.username}/${repo.slug}/upload`, { replace: true })
   return null
-})
+}, { server: false })
 </script>

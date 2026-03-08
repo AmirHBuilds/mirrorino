@@ -20,7 +20,7 @@
         <NuxtLink to="/explore" class="btn-ghost text-sm">Explore</NuxtLink>
         <template v-if="isLoggedIn">
           <NuxtLink v-if="isAdmin" to="/admin" class="btn-ghost text-sm">Admin</NuxtLink>
-          <NuxtLink to="/user/repos" class="btn-ghost text-sm">My Repos</NuxtLink>
+          <NuxtLink :to="myReposHref" class="btn-ghost text-sm">My Repos</NuxtLink>
           <div class="relative" ref="menuRef">
             <button @click="menuOpen = !menuOpen" class="w-8 h-8 rounded-full bg-surface-2 border border-border flex items-center justify-center text-sm font-mono hover:border-accent transition-colors">
               {{ user?.username?.[0]?.toUpperCase() }}
@@ -30,7 +30,7 @@
                 <p class="text-sm font-medium">{{ user?.username }}</p>
                 <p class="text-xs text-muted truncate">{{ user?.email }}</p>
               </div>
-              <NuxtLink to="/user/repos" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-2" @click="menuOpen=false">
+              <NuxtLink :to="myReposHref" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-2" @click="menuOpen=false">
                 <Icon name="mdi:source-repository" class="w-4 h-4" /> Repositories
               </NuxtLink>
               <NuxtLink to="/user/settings" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-2" @click="menuOpen=false">
@@ -62,6 +62,8 @@ const menuRef = ref<HTMLElement>()
 onClickOutside(menuRef, () => { menuOpen.value = false })
 
 function doSearch() {
-  if (search.value.trim()) navigateTo(`/explore?q=${encodeURIComponent(search.value.trim())}`)
+  if (search.value.trim()) navigateTo(`/search?q=${encodeURIComponent(search.value.trim())}`)
 }
+
+const myReposHref = computed(() => (user.value?.username ? `/${user.value.username}/repos` : '/user/repos'))
 </script>

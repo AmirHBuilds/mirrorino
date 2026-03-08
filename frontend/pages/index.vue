@@ -53,5 +53,9 @@
 import type { Repo } from '~/types'
 useSeoMeta({ title: 'Home' })
 const { get } = useApi()
-const { data: repos, pending } = await useAsyncData('home-repos', () => get<Repo[]>('/api/repos/?limit=6'))
+const { data: repos, pending } = await useAsyncData(
+  'home-repos',
+  () => get<Repo[]>('/api/repos/?limit=6'),
+  { server: false, default: () => [] },
+)
 </script>

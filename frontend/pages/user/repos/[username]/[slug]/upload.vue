@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-3xl mx-auto px-4 py-8">
-    <NuxtLink to="/user/repos" class="flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors">
+    <NuxtLink :to="`/${username}/repos`" class="flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors">
       <Icon name="mdi:arrow-left" class="w-4 h-4" /> Back to repositories
     </NuxtLink>
 
@@ -26,13 +26,13 @@ const username = computed(() => String(route.params.username || ''))
 const slug = computed(() => String(route.params.slug || ''))
 
 const { data: repo } = await useAsyncData(
-  'upload-repo-by-identity',
+  () => `upload-repo-by-identity:${username.value}:${slug.value}`,
   async () => {
     if (!username.value || !slug.value) return null
     const repos = await get<Repo[]>('/api/repos/mine')
     return repos.find((entry) => entry.owner.username === username.value && entry.slug === slug.value) || null
   },
-  { watch: [username, slug] },
+  { watch: [username, slug], server: false, default: () => null },
 )
 
 function onUploaded() {

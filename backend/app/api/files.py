@@ -85,6 +85,27 @@ async def download_file(request: Request, file_id: int, db: AsyncSession = Depen
     content = await get_file_content(file.storage_path)
     return StreamingResponse(io.BytesIO(content), media_type=file.mime_type, headers={"Content-Disposition": f'attachment; filename="{file.original_name}"'})
 
+
+@router.get("/users/{username}/repos/{repo_slug}/files/{file_id}/download")
+@limiter.limit("50/hour")
+async def download_file_by_identity(request: Request, username: str, repo_slug: str, file_id: int, db: AsyncSession = Depends(get_db)):
+    repo = await _get_repo_by_identity(db, username, repo_slug)
+    if not repo or not repo.is_public:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    result = await db.execute(select(File).where(File.id == file_id, File.repo_id == repo.id))
+    file = result.scalar_one_or_none()
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file.download_count += 1
+    repo.download_count += 1
+    presigned = await get_presigned_url(file.storage_path, file.original_name)
+    if presigned:
+        return RedirectResponse(url=presigned)
+    content = await get_file_content(file.storage_path)
+    return StreamingResponse(io.BytesIO(content), media_type=file.mime_type, headers={"Content-Disposition": f'attachment; filename="{file.original_name}"'})
+
 @router.delete("/files/{file_id}")
 async def delete_file_endpoint(file_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(select(File).where(File.id == file_id))
