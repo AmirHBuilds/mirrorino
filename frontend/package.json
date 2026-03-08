@@ -8,14 +8,14 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "nuxt": "^3.11.0",
+    "@nuxt/icon": "^1.2.0",
+    "@nuxtjs/color-mode": "^3.4.0",
     "@nuxtjs/tailwindcss": "^6.11.4",
     "@pinia/nuxt": "^0.5.1",
-    "pinia": "^2.1.7",
-    "@vueuse/nuxt": "^10.9.0",
     "@vueuse/core": "^10.9.0",
-    "@nuxt/icon": "^1.2.0",
-    "@nuxtjs/color-mode": "^3.4.0"
+    "@vueuse/nuxt": "^10.9.0",
+    "nuxt": "^3.11.0",
+    "pinia": "^2.1.7"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.19",

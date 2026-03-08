@@ -27,8 +27,10 @@ useSeoMeta({ title: 'Explore' })
 const route = useRoute()
 const q = ref((route.query.q as string) || '')
 const { get } = useApi()
-const { data: repos, pending, refresh } = await useAsyncData('explore', () =>
-  get<Repo[]>(`/api/repos/?limit=30${q.value ? `&q=${encodeURIComponent(q.value)}` : ''}`)
+const { data: repos, pending, refresh } = await useAsyncData(
+  () => `explore:${q.value}`,
+  () => get<Repo[]>(`/api/repos/?limit=30${q.value ? `&q=${encodeURIComponent(q.value)}` : ''}`),
+  { server: false, default: () => [] },
 )
 const debouncedSearch = useDebounceFn(() => refresh(), 400)
 </script>

@@ -43,7 +43,7 @@ async def verify_repo(repo_id: int, action: AdminVerifyAction, db: AsyncSession 
         owner = owner_r.scalar_one_or_none()
         if owner:
             from app.config import settings
-            owner.storage_limit = max(owner.storage_limit, settings.VERIFIED_STORAGE_LIMIT)
+            owner.storage_limit += settings.VERIFICATION_BONUS_BYTES
     else:
         repo.verification_status = VerificationStatus.REJECTED
     repo.verification_note = action.note

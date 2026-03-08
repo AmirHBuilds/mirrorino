@@ -5,12 +5,12 @@
       <div class="flex items-center gap-2 min-w-0">
         <Icon name="mdi:source-repository" class="w-4 h-4 text-accent-2 shrink-0" />
         <span class="font-medium text-sm truncate">
-          <span class="text-muted">{{ repo.owner.username }}</span>
+          <button class="text-muted hover:underline" @click.stop.prevent="navigateTo(`/${repo.owner.username}/repos`)">{{ repo.owner.username }}</button>
           <span class="text-muted">/</span>
           <span class="text-accent-2">{{ repo.name }}</span>
         </span>
       </div>
-      <VerificationBadge :status="repo.verification_status" />
+      <VerificationBadge :status="displayStatus" />
     </div>
 
     <!-- Description -->
@@ -18,7 +18,11 @@
     <p v-else class="text-xs text-surface-3 italic mb-3">No description</p>
 
     <!-- Warning banner for unverified -->
-    <div v-if="repo.verification_status === 'unverified'" class="flex items-center gap-1.5 text-xs text-warning bg-warning/5 border border-warning/20 rounded px-2 py-1.5 mb-3">
+    <div v-if="displayStatus === 'rejected'" class="flex items-center gap-1.5 text-xs text-danger bg-danger/5 border border-danger/30 rounded px-2 py-1.5 mb-3">
+      <Icon name="mdi:alert-circle" class="w-3.5 h-3.5 shrink-0" />
+      Marked as spam
+    </div>
+    <div v-else-if="displayStatus === 'unverified'" class="flex items-center gap-1.5 text-xs text-warning bg-warning/5 border border-warning/20 rounded px-2 py-1.5 mb-3">
       <Icon name="mdi:alert-outline" class="w-3.5 h-3.5 shrink-0" />
       Download at your own risk — unverified repository
     </div>
@@ -36,5 +40,10 @@
 <script setup lang="ts">
 import { formatBytes, formatRelative } from '~/utils/format'
 import type { Repo } from '~/types'
-defineProps<{ repo: Repo }>()
+import { visibleVerificationStatus } from '~/utils/repo'
+
+const props = defineProps<{ repo: Repo }>()
+const { user } = useAuth()
+const isOwner = computed(() => user.value?.id === props.repo.owner.id)
+const displayStatus = computed(() => visibleVerificationStatus(props.repo.verification_status, !!isOwner.value))
 </script>

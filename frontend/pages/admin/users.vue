@@ -33,7 +33,18 @@
               <span class="text-xs font-mono px-2 py-0.5 rounded border border-border" :class="u.role === 'superadmin' ? 'text-accent border-accent/30' : u.role === 'admin' ? 'text-accent-2 border-accent-2/30' : 'text-muted'">{{ u.role }}</span>
             </td>
             <td class="px-4 py-3 hidden md:table-cell">
-              <div class="text-xs font-mono text-muted">{{ formatBytes(u.storage_used) }} / {{ formatBytes(u.storage_limit) }}</div>
+              <div class="text-xs font-mono text-muted mb-2">{{ formatBytes(u.storage_used) }} / {{ formatBytes(u.storage_limit) }}</div>
+              <div class="flex items-center gap-1.5">
+                <input
+                  v-model.number="storageDraft[u.id]"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="input py-1 px-2 text-xs w-20"
+                />
+                <span class="text-xs text-muted">GB</span>
+                <button @click="setStorage(u.id)" class="btn-ghost py-1 px-2 text-xs">Set</button>
+              </div>
             </td>
             <td class="px-4 py-3 hidden lg:table-cell text-xs text-muted font-mono">{{ formatDate(u.created_at) }}</td>
             <td class="px-4 py-3">
@@ -60,12 +71,33 @@ definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Admin · Users' })
 const { get, put, delete: del } = useApi()
 const q = ref('')
-const { data: users, refresh } = await useAsyncData('admin-users', () => get<User[]>(`/api/admin/users${q.value ? `?q=${q.value}` : ''}`))
+const storageDraft = reactive<Record<number, number>>({})
+const { data: users, refresh } = await useAsyncData(
+  () => `admin-users:${q.value}`,
+  () => get<User[]>(`/api/admin/users${q.value ? `?q=${q.value}` : ''}`),
+  { server: false, default: () => [] },
+)
 const debouncedRefresh = useDebounceFn(() => refresh(), 400)
+
+watch(users, (value) => {
+  for (const user of value || []) {
+    storageDraft[user.id] = Math.max(1, Math.round(user.storage_limit / (1024 ** 3)))
+  }
+}, { immediate: true })
+
 async function toggleBan(u: User) {
   await put(`/api/admin/users/${u.id}`, { is_banned: !u.is_banned })
   await refresh()
 }
+
+async function setStorage(userId: number) {
+  const gb = Number(storageDraft[userId] || 0)
+  if (!Number.isFinite(gb) || gb < 1) return
+  const bytes = Math.round(gb * 1024 ** 3)
+  await put(`/api/admin/users/${userId}`, { storage_limit: bytes })
+  await refresh()
+}
+
 async function deleteUser(id: number) {
   if (!confirm('Permanently delete this user and all their data?')) return
   await del(`/api/admin/users/${id}`)

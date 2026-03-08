@@ -33,10 +33,21 @@
       </div>
     </section>
 
-    <!-- Recent repos -->
-    <section class="max-w-7xl mx-auto px-4 py-12">
+    <!-- Most downloaded repos -->
+    <section class="max-w-7xl mx-auto px-4 py-10">
+      <div class="card p-6 mb-8 border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <p class="text-xs font-mono uppercase tracking-wider text-muted">Trending now</p>
+            <h2 class="text-xl font-semibold">Most downloaded repositories</h2>
+          </div>
+          <NuxtLink to="/explore" class="btn-secondary text-sm py-1.5">Explore all repos</NuxtLink>
+        </div>
+        <p class="text-sm text-muted">The most downloaded public repositories across Downloadino.</p>
+      </div>
+
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-lg font-semibold">Recent repositories</h2>
+        <h2 class="text-lg font-semibold">Top downloads</h2>
         <NuxtLink to="/explore" class="text-sm text-accent-2 hover:underline">View all →</NuxtLink>
       </div>
       <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -53,5 +64,9 @@
 import type { Repo } from '~/types'
 useSeoMeta({ title: 'Home' })
 const { get } = useApi()
-const { data: repos, pending } = await useAsyncData('home-repos', () => get<Repo[]>('/api/repos/?limit=6'))
+const { data: repos, pending } = await useAsyncData(
+  'home-repos',
+  () => get<Repo[]>('/api/repos/?limit=6&sort=downloads'),
+  { server: false, default: () => [] },
+)
 </script>

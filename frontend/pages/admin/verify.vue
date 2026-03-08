@@ -33,7 +33,11 @@ import { formatBytes } from '~/utils/format'
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Verify Queue' })
 const { get, post } = useApi()
-const { data: repos, refresh } = await useAsyncData('verify-queue', () => get<any[]>('/api/admin/verify-queue'))
+const { data: repos, refresh } = await useAsyncData(
+  'verify-queue',
+  () => get<any[]>('/api/admin/verify-queue'),
+  { server: false, default: () => [] },
+)
 async function action(id: number, act: string) {
   await post(`/api/admin/repos/${id}/verify`, { action: act })
   await refresh()

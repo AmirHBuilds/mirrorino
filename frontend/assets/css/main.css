@@ -24,3 +24,20 @@
   .badge-pending { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono bg-accent-2/10 text-accent-2 border border-accent-2/20; }
   .badge-rejected { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono bg-danger/10 text-danger border border-danger/20; }
 }
+
+@layer components {
+  .markdown-body { @apply text-sm text-fg leading-7; }
+  .markdown-body h1 { @apply text-2xl font-semibold mt-4 mb-3; }
+  .markdown-body h2 { @apply text-xl font-semibold mt-4 mb-2; }
+  .markdown-body h3 { @apply text-lg font-semibold mt-3 mb-2; }
+  .markdown-body p { @apply mb-3; }
+  .markdown-body ul { @apply list-disc pl-6 mb-3; }
+  .markdown-body ol { @apply list-decimal pl-6 mb-3; }
+  .markdown-body code { @apply font-mono bg-surface-2 px-1 py-0.5 rounded text-xs; }
+  .markdown-body pre { @apply bg-surface-2 rounded p-3 overflow-x-auto mb-3; }
+  .markdown-body pre code { @apply bg-transparent p-0 text-xs; }
+  .markdown-body a { @apply text-accent-2 underline; }
+  .markdown-body blockquote { @apply border-l-2 border-border pl-3 text-muted mb-3; }
+  .markdown-body hr { @apply border-border my-4; }
+  .markdown-body li { @apply mb-1; }
+}

@@ -46,7 +46,11 @@ import type { AdminStats } from '~/types'
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useSeoMeta({ title: 'Admin Dashboard' })
 const { get } = useApi()
-const { data: stats, pending } = await useAsyncData('admin-stats', () => get<AdminStats>('/api/admin/stats'))
+const { data: stats, pending } = await useAsyncData(
+  'admin-stats',
+  () => get<AdminStats>('/api/admin/stats'),
+  { server: false, default: () => null },
+)
 const statCards = computed(() => [
   { label: 'Total Users',   value: stats.value?.total_users || 0,     icon: 'mdi:account-group-outline', color: 'bg-accent-2/10 text-accent-2' },
   { label: 'Repositories',  value: stats.value?.total_repos || 0,     icon: 'mdi:source-repository',     color: 'bg-success/10 text-success' },
