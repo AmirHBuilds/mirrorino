@@ -36,15 +36,26 @@ export function useApi() {
             if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
           }
         }
+        xhr.timeout = 120000
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText))
+            try {
+              resolve(xhr.responseText ? JSON.parse(xhr.responseText) : (undefined as T))
+            } catch {
+              reject(new Error('Upload completed but response could not be parsed'))
+            }
           } else {
-            try { reject(new Error(JSON.parse(xhr.responseText).detail || 'Upload failed')) }
-            catch { reject(new Error('Upload failed')) }
+            try {
+              const detail = JSON.parse(xhr.responseText).detail
+              reject(new Error(typeof detail === 'string' ? detail : JSON.stringify(detail)))
+            } catch {
+              reject(new Error('Upload failed'))
+            }
           }
         }
         xhr.onerror = () => reject(new Error('Network error'))
+        xhr.onabort = () => reject(new Error('Upload cancelled'))
+        xhr.ontimeout = () => reject(new Error('Upload timed out while waiting for server response'))
         xhr.send(formData)
       })
     },

@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ repoId: number }>()
+const props = defineProps<{ repoUsername: string; repoSlug: string }>()
 const emit  = defineEmits<{ uploaded: [] }>()
 
 const { uploadFile } = useApi()
@@ -108,7 +108,7 @@ async function processQueue() {
       fd.append('file', item.file)
 
       try {
-        await uploadFile(`/api/repos/${props.repoId}/files`, fd, (pct) => { item.progress = pct })
+        await uploadFile(`/api/users/${props.repoUsername}/repos/${props.repoSlug}/files`, fd, (pct) => { item.progress = pct })
         item.status = 'done'
         item.progress = 100
         emit('uploaded')

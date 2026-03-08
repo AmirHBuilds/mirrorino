@@ -42,7 +42,7 @@
             </div>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <button @click.stop="goToUpload(repo.id)" class="btn-ghost py-1 px-2 text-xs">Upload</button>
+            <button @click.stop="goToUpload(repo)" class="btn-ghost py-1 px-2 text-xs">Upload</button>
             <button @click="deleteRepo(repo.id)" class="btn-ghost py-1 px-2 text-xs text-danger hover:text-danger">
               <Icon name="mdi:trash-can-outline" class="w-4 h-4" />
             </button>
@@ -114,8 +114,8 @@ async function createRepo() {
 }
 
 
-function goToUpload(id: number) {
-  navigateTo(`/user/repos/${id}/upload`)
+function goToUpload(repo: Repo) {
+  navigateTo(`/user/repos/${repo.owner.username}/${repo.slug}/upload`)
 }
 
 async function deleteRepo(id: number) {

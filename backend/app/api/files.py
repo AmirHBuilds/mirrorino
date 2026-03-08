@@ -15,6 +15,15 @@ from app.services.file_service import upload_file, delete_file_record
 
 router = APIRouter(tags=["Files"])
 
+
+async def _get_repo_by_identity(db: AsyncSession, username: str, repo_slug: str) -> Repo | None:
+    result = await db.execute(
+        select(Repo)
+        .join(User, Repo.owner_id == User.id)
+        .where(User.username == username, Repo.slug == repo_slug)
+    )
+    return result.scalar_one_or_none()
+
 @router.get("/repos/{repo_id}/files", response_model=list[FileResponse])
 async def list_repo_files(repo_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Repo).where(Repo.id == repo_id, Repo.is_public == True))
@@ -23,12 +32,38 @@ async def list_repo_files(repo_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(File).where(File.repo_id == repo_id).order_by(File.uploaded_at.desc()))
     return result.scalars().all()
 
+
+@router.get("/users/{username}/repos/{repo_slug}/files", response_model=list[FileResponse])
+async def list_repo_files_by_identity(username: str, repo_slug: str, db: AsyncSession = Depends(get_db)):
+    repo = await _get_repo_by_identity(db, username, repo_slug)
+    if not repo or not repo.is_public:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    result = await db.execute(select(File).where(File.repo_id == repo.id).order_by(File.uploaded_at.desc()))
+    return result.scalars().all()
+
 @router.post("/repos/{repo_id}/files", response_model=FileUploadResult, status_code=201)
 @upload_limiter.limit("10/hour")
 async def upload_to_repo(request: Request, repo_id: int, file: UploadFile = FastAPIFile(...), db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(select(Repo).where(Repo.id == repo_id, Repo.owner_id == current_user.id))
     repo = result.scalar_one_or_none()
     if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found or access denied")
+    file_record = await upload_file(file, repo, current_user, db)
+    return FileUploadResult(file=file_record, storage_remaining=current_user.storage_remaining, storage_usage_percent=current_user.storage_usage_percent)
+
+
+@router.post("/users/{username}/repos/{repo_slug}/files", response_model=FileUploadResult, status_code=201)
+@upload_limiter.limit("10/hour")
+async def upload_to_repo_by_identity(
+    request: Request,
+    username: str,
+    repo_slug: str,
+    file: UploadFile = FastAPIFile(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repo = await _get_repo_by_identity(db, username, repo_slug)
+    if not repo or repo.owner_id != current_user.id:
         raise HTTPException(status_code=404, detail="Repository not found or access denied")
     file_record = await upload_file(file, repo, current_user, db)
     return FileUploadResult(file=file_record, storage_remaining=current_user.storage_remaining, storage_usage_percent=current_user.storage_usage_percent)

@@ -29,7 +29,7 @@
           <button v-if="repo.verification_status === 'unverified'" @click="requestVerify" class="btn-secondary text-sm py-1.5">
             <Icon name="mdi:shield-check-outline" class="w-4 h-4" /> Request Verification
           </button>
-          <NuxtLink :to="`/user/repos/${repo.id}/upload`" class="btn-primary text-sm py-1.5">
+          <NuxtLink :to="`/user/repos/${repo.owner.username}/${repo.slug}/upload`" class="btn-primary text-sm py-1.5">
             <Icon name="mdi:upload" class="w-4 h-4" /> Upload files
           </NuxtLink>
         </div>
@@ -81,7 +81,7 @@ const { data: repo, pending, refresh: refreshRepo } = await useAsyncData('repo-d
 
 const { data: files, refresh: refreshFiles } = await useAsyncData('repo-files', async () => {
   if (!repo.value) return []
-  return get<RepoFile[]>(`/api/repos/${repo.value.id}/files`)
+  return get<RepoFile[]>(`/api/users/${repo.value.owner.username}/repos/${repo.value.slug}/files`)
 })
 
 const isOwner = computed(() => isLoggedIn.value && !!repo.value && user.value?.id === repo.value.owner.id)

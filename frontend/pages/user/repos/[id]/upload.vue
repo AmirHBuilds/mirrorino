@@ -1,15 +1,6 @@
 <template>
   <div class="max-w-3xl mx-auto px-4 py-8">
-    <NuxtLink to="/user/repos" class="flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors">
-      <Icon name="mdi:arrow-left" class="w-4 h-4" /> Back to repositories
-    </NuxtLink>
-
-    <div v-if="repoId <= 0" class="card p-4 text-sm text-danger">Invalid repository id.</div>
-    <template v-else>
-      <h1 class="text-xl font-bold mb-2">Upload files</h1>
-      <p class="text-sm text-muted mb-6">Repository: {{ repoName || `#${repoId}` }}</p>
-      <UploadZone :repo-id="repoId" @uploaded="onUploaded" />
-    </template>
+    <div class="card p-4 text-sm text-muted">Redirecting to repository upload page…</div>
   </div>
 </template>
 
@@ -17,25 +8,25 @@
 import type { Repo } from '~/types'
 
 definePageMeta({ middleware: 'auth' })
-useSeoMeta({ title: 'Upload Files' })
 
 const route = useRoute()
-const repoId = computed(() => Number(route.params.id || 0))
 const { get } = useApi()
+const repoId = computed(() => Number(route.params.id || 0))
 
-const { data: repo } = await useAsyncData(
-  'upload-repo',
-  async () => {
-    if (repoId.value <= 0) return null
-    const repos = await get<Repo[]>('/api/repos/mine')
-    return repos.find((entry) => entry.id === repoId.value) || null
-  },
-  { watch: [repoId] },
-)
+await useAsyncData('upload-repo-legacy-redirect', async () => {
+  if (repoId.value <= 0) {
+    await navigateTo('/user/repos')
+    return null
+  }
 
-const repoName = computed(() => repo.value?.name || '')
+  const repos = await get<Repo[]>('/api/repos/mine')
+  const repo = repos.find((entry) => entry.id === repoId.value)
+  if (!repo) {
+    await navigateTo('/user/repos')
+    return null
+  }
 
-function onUploaded() {
-  refreshNuxtData('my-repos')
-}
+  await navigateTo(`/user/repos/${repo.owner.username}/${repo.slug}/upload`, { replace: true })
+  return null
+})
 </script>
