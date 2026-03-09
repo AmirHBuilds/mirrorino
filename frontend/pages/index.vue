@@ -2,14 +2,20 @@
   <div>
     <!-- Most downloaded repos (top) -->
     <section class="max-w-7xl mx-auto px-4 py-8">
-      <div class="card p-6 mb-6 border border-accent/50 bg-surface-1">
+      <div class="card p-6 sm:p-7 mb-6 border border-accent-2/30 bg-gradient-to-br from-surface-1 via-surface-1 to-surface-2 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
-            <p class="text-xs font-mono uppercase tracking-wider text-muted">Top of Downloadino</p>
-            <h2 class="text-2xl font-semibold mt-1">Most downloaded repositories</h2>
-            <p class="text-sm text-muted mt-1">Public repositories ranked by downloads.</p>
+            <p class="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-accent-2/90 bg-accent-2/10 border border-accent-2/30 rounded-full px-2.5 py-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-accent-2"></span>
+              Top of Downloadino
+            </p>
+            <h2 class="text-2xl font-semibold mt-3 text-fg">Most downloaded repositories</h2>
+            <p class="text-sm text-muted mt-1 max-w-xl">Public repositories ranked by downloads. Discover trending projects quickly with a cleaner and easier-to-scan layout.</p>
           </div>
-          <NuxtLink to="/explore" class="btn-secondary text-sm py-1.5 px-3">Explore all repos</NuxtLink>
+          <NuxtLink to="/explore" class="inline-flex items-center gap-2 text-sm py-2 px-4 rounded-lg border border-accent-2/40 bg-accent-2/20 text-accent-2 hover:bg-accent-2/30 hover:border-accent-2/70 transition-all duration-150 shadow-sm hover:shadow-md">
+            <Icon name="mdilocal:source-repository-multiple" class="w-4 h-4" />
+            Explore all repos
+          </NuxtLink>
         </div>
       </div>
 

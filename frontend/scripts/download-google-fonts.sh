@@ -33,10 +33,10 @@ declare -A EXPECTED_NAMES=(
 mapfile -t PARSED_ROWS < <(
   awk '
     function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-    
-    # Extract font family name (handles both single and double quotes using \x27)
-    /font-family:/ {
-      if (match($0, /font-family:[[:space:]]*[\x27"]([^\x27"]+)[\x27"]/, m)) family=trim(m[1])
+    /\/\*/ {
+      if (match($0, /\/\*[[:space:]]*([^*]+)[[:space:]]*\*\//, m)) {
+        family=trim(m[1])
+      }
     }
     /font-weight:/ {
       if (match($0, /font-weight:[[:space:]]*([0-9]+)/, m)) weight=m[1]
@@ -51,7 +51,7 @@ mapfile -t PARSED_ROWS < <(
       if (family != "" && weight != "" && url != "") {
         printf "%s:%s|%d|%s\n", family, weight, latin, url
       }
-      family=""; weight=""; url=""; latin=0
+      weight=""; url=""; latin=0
     }
   ' "${CSS_FILE}"
 )

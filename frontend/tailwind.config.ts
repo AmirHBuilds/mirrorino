@@ -12,7 +12,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Syne', 'sans-serif'],
+        sans: ['Syne', 'Vazir', 'sans-serif'],
         mono: ['IBM Plex Mono', 'monospace'],
       },
       colors: {

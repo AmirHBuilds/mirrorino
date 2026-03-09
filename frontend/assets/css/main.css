@@ -48,18 +48,46 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/vazir-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/vazir-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/vazir-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   * { box-sizing: border-box; }
-  html { font-family: 'Syne', sans-serif; }
+  html { font-family: 'Syne', 'Vazir', sans-serif; }
   body { @apply bg-surface text-fg antialiased; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { @apply bg-surface; }
   ::-webkit-scrollbar-thumb { @apply bg-surface-3 rounded-full; }
+  .font-persian { font-family: 'Vazir', 'Syne', sans-serif; direction: rtl; }
+  :lang(fa) { font-family: 'Vazir', 'Syne', sans-serif; }
 }
+
 
 @layer components {
   .btn { @apply inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed; }

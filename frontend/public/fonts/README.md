@@ -22,6 +22,9 @@ Place these exact filenames in `frontend/public/fonts/`:
 - `syne-800.woff2`
 - `ibm-plex-mono-400.woff2`
 - `ibm-plex-mono-500.woff2`
+- `vazir-400.woff2`
+- `vazir-500.woff2`
+- `vazir-700.woff2`
 
 ## Exact setup steps
 
@@ -71,3 +74,14 @@ types {
 ```
 
 Most modern Nginx images already include this in `mime.types`, so this step is usually not required.
+
+
+## Persian font (Vazir) setup
+
+To use Vazir for Persian text across the website, put these files in this same folder:
+
+- `frontend/public/fonts/vazir-400.woff2`
+- `frontend/public/fonts/vazir-500.woff2`
+- `frontend/public/fonts/vazir-700.woff2`
+
+The frontend CSS is already configured to load these files. Once copied, rebuild/restart the frontend.
