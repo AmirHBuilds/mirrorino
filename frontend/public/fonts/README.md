@@ -1,19 +1,19 @@
-# Local web fonts
+# Local web fonts (offline / localhost-safe)
 
-Your app now loads fonts from local disk via `/fonts/*.woff2` files in this folder.
+Your app is configured to load fonts from local files in this folder (`/fonts/*.woff2`).
 
-## What the code used before (external DNS/CDN)
+## Why this works
 
-Previously, fonts were loaded from Google Fonts using:
+Google Fonts usually needs these external hosts:
 
-- CSS endpoint DNS: `fonts.googleapis.com`
-- Font files DNS/CDN: `fonts.gstatic.com`
+- `fonts.googleapis.com` (CSS)
+- `fonts.gstatic.com` (font files)
 
-The CSS URL used by the app was:
+If your server cannot access those domains, font loading fails. Local files avoid that dependency.
 
-`https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap`
+## Required files
 
-## Files you must place here
+Place these exact filenames in `frontend/public/fonts/`:
 
 - `syne-400.woff2`
 - `syne-500.woff2`
@@ -23,31 +23,51 @@ The CSS URL used by the app was:
 - `ibm-plex-mono-400.woff2`
 - `ibm-plex-mono-500.woff2`
 
-## How to download them
+## Exact setup steps
 
-### Option A (easy): from Google Fonts website
+### 1) Download once on any machine that has internet
 
-1. Open https://fonts.google.com/specimen/Syne and https://fonts.google.com/specimen/IBM+Plex+Mono
-2. Download the family files.
-3. Convert/pick `.woff2` files for the required weights above.
-4. Rename to the exact filenames listed above and copy into this folder.
-
-### Option B (exact same source the code previously used)
-
-On a machine with internet access, fetch the CSS from `fonts.googleapis.com`, then download every `https://fonts.gstatic.com/...woff2` URL found in it.
-
-Example helper flow:
+From project root:
 
 ```bash
-mkdir -p frontend/public/fonts
-curl -L -A "Mozilla/5.0" \
-  'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap' \
-  -o /tmp/downloadino-fonts.css
-
-# open /tmp/downloadino-fonts.css, copy the .woff2 URLs from fonts.gstatic.com,
-# download them, then rename to:
-# syne-400.woff2 syne-500.woff2 syne-600.woff2 syne-700.woff2 syne-800.woff2
-# ibm-plex-mono-400.woff2 ibm-plex-mono-500.woff2
+bash frontend/scripts/download-google-fonts.sh
 ```
 
-After files are in this folder, rebuild/restart frontend.
+This script fetches the Google Fonts CSS and downloads the required `.woff2` files with the exact names above.
+
+### 2) Move/copy the files to your offline server
+
+Copy the whole folder:
+
+```bash
+frontend/public/fonts/
+```
+
+into the same path on your server/project.
+
+### 3) Build/restart frontend
+
+```bash
+docker compose up -d --build frontend
+```
+
+(or your normal Nuxt deploy/restart command)
+
+### 4) Verify in browser
+
+Open DevTools → Network and confirm:
+
+- font requests are `/fonts/*.woff2`
+- no requests go to `fonts.googleapis.com` or `fonts.gstatic.com`
+
+## Optional server check (Nginx)
+
+Ensure `.woff2` is served with a font MIME type. For Nginx:
+
+```nginx
+types {
+  font/woff2 woff2;
+}
+```
+
+Most modern Nginx images already include this in `mime.types`, so this step is usually not required.
