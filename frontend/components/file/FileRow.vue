@@ -8,6 +8,9 @@
       <Icon name="mdilocal:download-outline" class="w-3.5 h-3.5" />{{ file.download_count }}
     </span>
     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button v-if="canEdit" @click="$emit('edit', file)" class="btn-ghost py-1 px-2 text-xs" :aria-label="`Edit ${file.original_name}`" title="Edit file">
+        <Icon name="mdilocal:pencil-outline" class="w-3.5 h-3.5" />
+      </button>
       <a :href="downloadHref" class="btn-ghost py-1 px-2 text-xs" :aria-label="`Download ${file.original_name}`">
         <Icon name="mdilocal:download" class="w-3.5 h-3.5" />
       </a>
@@ -21,8 +24,8 @@
 <script setup lang="ts">
 import { formatBytes, formatRelative, fileIcon } from '~/utils/format'
 import type { RepoFile } from '~/types'
-const props = defineProps<{ file: RepoFile; repoUsername: string; repoSlug: string; canDelete?: boolean }>()
-defineEmits<{ delete: [id: number] }>()
+const props = defineProps<{ file: RepoFile; repoUsername: string; repoSlug: string; canDelete?: boolean; canEdit?: boolean }>()
+defineEmits<{ delete: [id: number]; edit: [file: RepoFile] }>()
 const apiBase = useRuntimeConfig().public.apiBase
 const rawHref = computed(() => `${apiBase}/raw/${props.repoUsername}/${props.repoSlug}/${encodeURIComponent(props.file.original_name)}`)
 const downloadHref = computed(() => `${apiBase}/api/users/${props.repoUsername}/repos/${props.repoSlug}/files/${props.file.id}/download`)

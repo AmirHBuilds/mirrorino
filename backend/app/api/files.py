@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile, Request
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -6,7 +7,7 @@ import io
 from app.db.session import get_db
 from app.core.security import get_current_user
 from app.core.rate_limiter import limiter, upload_limiter
-from app.core.storage import get_file_content, get_presigned_url
+from app.core.storage import get_file_content, get_presigned_url, update_file_content
 from app.models.repo import Repo
 from app.models.file import File
 from app.models.user import User
@@ -14,6 +15,10 @@ from app.schemas.file import FileResponse, FileUploadResult
 from app.services.file_service import upload_file, delete_file_record
 
 router = APIRouter(tags=["Files"])
+
+
+class FileContentUpdate(BaseModel):
+    content: str
 
 
 async def _get_repo_by_identity(db: AsyncSession, username: str, repo_slug: str) -> Repo | None:
@@ -118,3 +123,58 @@ async def delete_file_endpoint(file_id: int, db: AsyncSession = Depends(get_db),
     freed = file.size_bytes
     await delete_file_record(file, current_user, db)
     return {"message": "File deleted", "storage_freed_bytes": freed, "storage_remaining": current_user.storage_remaining}
+
+
+@router.put("/files/{file_id}/content")
+async def update_file_content_endpoint(
+    file_id: int,
+    payload: FileContentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(File).where(File.id == file_id))
+    file = result.scalar_one_or_none()
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    repo_result = await db.execute(select(Repo).where(Repo.id == file.repo_id, Repo.owner_id == current_user.id))
+    repo = repo_result.scalar_one_or_none()
+    if not repo:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    try:
+        content_bytes = payload.content.encode("utf-8")
+    except UnicodeEncodeError:
+        raise HTTPException(status_code=400, detail="Content must be valid UTF-8 text")
+
+    owner_result = await db.execute(select(User).where(User.id == current_user.id))
+    owner = owner_result.scalar_one_or_none()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Owner not found")
+
+    size_delta = len(content_bytes) - file.size_bytes
+    if size_delta > 0 and owner.storage_used + size_delta > owner.storage_limit:
+        remaining = owner.storage_limit - owner.storage_used
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "code": "QUOTA_EXCEEDED",
+                "message": f"Storage quota exceeded. You have {remaining} bytes remaining.",
+                "storage_remaining": remaining,
+                "storage_limit": owner.storage_limit,
+            },
+        )
+
+    await update_file_content(file.storage_path, content_bytes, file.original_name)
+    file.size_bytes = len(content_bytes)
+    file.mime_type = "text/plain"
+    file.detected_type = "text/plain"
+    owner.storage_used = max(0, owner.storage_used + size_delta)
+    await db.flush()
+
+    return {
+        "message": "File updated",
+        "size_bytes": file.size_bytes,
+        "storage_remaining": owner.storage_remaining,
+        "storage_usage_percent": owner.storage_usage_percent,
+    }
