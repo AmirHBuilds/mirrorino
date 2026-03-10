@@ -4,7 +4,7 @@
       <div class="text-center mb-8">
         <span class="text-4xl text-accent font-mono">▼</span>
         <h1 class="text-2xl font-bold mt-3">Sign in</h1>
-        <p class="text-sm text-muted mt-1">Welcome back to Downloadino</p>
+        <p class="text-sm text-muted mt-1">Welcome back to Mirrorino</p>
       </div>
       <div class="card p-6">
         <form @submit.prevent="submit" class="space-y-4">

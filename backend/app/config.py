@@ -9,19 +9,19 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    APP_NAME: str = "Downloadino"
+    APP_NAME: str = "Mirrorino"
     SECRET_KEY: str = "change-this-secret"
     DEBUG: bool = False
-    FRONTEND_URL: str = "https://downloadino.com"
+    FRONTEND_URL: str = "https://mirrorino.com"
 
-    DATABASE_URL: str = "postgresql+asyncpg://downloadino:password@db:5432/downloadino"
+    DATABASE_URL: str = "postgresql+asyncpg://mirrorino:password@db:5432/mirrorino"
     REDIS_URL: str = "redis://:redispass@redis:6379/0"
 
     STORAGE_BACKEND: str = "s3"
     S3_ENDPOINT_URL: Optional[str] = None
     S3_ACCESS_KEY: Optional[str] = None
     S3_SECRET_KEY: Optional[str] = None
-    S3_BUCKET_NAME: str = "downloadino-files"
+    S3_BUCKET_NAME: str = "mirrorino-files"
     S3_REGION: str = "ir-thr-at1"
     LOCAL_STORAGE_PATH: str = "/data/files"
 
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     MAX_DOWNLOADS_PER_HOUR: int = 50
 
     SUPERADMIN_USERNAME: str = "admin"
-    SUPERADMIN_EMAIL: str = "admin@downloadino.ir"
+    SUPERADMIN_EMAIL: str = "admin@mirrorino.com"
     SUPERADMIN_PASSWORD: str = "changeme123!"
 
 settings = Settings()

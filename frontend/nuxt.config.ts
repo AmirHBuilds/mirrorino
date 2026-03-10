@@ -23,7 +23,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://api.downloadino.com',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://api.mirrorino.com',
       supportEmail: process.env.NUXT_PUBLIC_SUPPORT_EMAIL || '',
       supportTelegramId: process.env.NUXT_PUBLIC_SUPPORT_TELEGRAM_ID || '',
       supportWebsite: process.env.NUXT_PUBLIC_SUPPORT_WEBSITE || '',
@@ -32,7 +32,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { class: 'dark' },
-      titleTemplate: '%s — Downloadino',
+      titleTemplate: '%s — Mirrorino',
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
       ],

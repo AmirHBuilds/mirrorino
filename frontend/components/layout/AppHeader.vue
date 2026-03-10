@@ -4,7 +4,7 @@
       <!-- Logo -->
       <NuxtLink to="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
         <span class="text-accent font-mono">▼</span>
-        <span>Downloadino</span>
+        <span>Mirrorino</span>
       </NuxtLink>
 
       <!-- Search -->

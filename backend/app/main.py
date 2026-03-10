@@ -59,7 +59,7 @@ async def _seed_superadmin():
 
 
 app = FastAPI(
-    title="Downloadino API",
+    title="Mirrorino API",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/api/docs",

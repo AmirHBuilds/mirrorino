@@ -1,6 +1,6 @@
 """
 Raw file serving — like raw.githubusercontent.com
-Usage: bash <(curl -Ls https://api.downloadino.com/raw/username/repo-slug/install.sh)
+Usage: bash <(curl -Ls https://api.mirrorino.com/raw/username/repo-slug/install.sh)
 """
 import os
 from fastapi import APIRouter, Depends, HTTPException, Request

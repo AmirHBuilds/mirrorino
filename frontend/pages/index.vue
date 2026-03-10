@@ -7,7 +7,7 @@
           <div>
             <p class="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-accent-2/90 bg-accent-2/10 border border-accent-2/30 rounded-full px-2.5 py-1">
               <span class="w-1.5 h-1.5 rounded-full bg-accent-2"></span>
-              Top of Downloadino
+              Top of Mirrorino
             </p>
             <h2 class="text-2xl font-semibold mt-3 text-fg">Most downloaded repositories</h2>
             <p class="text-sm text-muted mt-1 max-w-xl">Public repositories ranked by downloads. Discover trending projects quickly with a cleaner and easier-to-scan layout.</p>
@@ -53,7 +53,7 @@
             </div>
             <div class="px-4 py-4 font-mono text-sm text-left">
               <span class="text-success">$</span>
-              <span class="text-fg ml-2">bash &lt;(curl -Ls https://api.downloadino.com/raw/</span><span class="text-accent">username</span><span class="text-fg">/</span><span class="text-accent-2">my-tool</span><span class="text-fg">/install.sh)</span>
+              <span class="text-fg ml-2">bash &lt;(curl -Ls https://api.mirrorino.com/raw/</span><span class="text-accent">username</span><span class="text-fg">/</span><span class="text-accent-2">my-tool</span><span class="text-fg">/install.sh)</span>
             </div>
           </div>
         </div>

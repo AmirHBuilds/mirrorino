@@ -1,5 +1,5 @@
 {
-  "name": "downloadino-frontend",
+  "name": "mirrorino-frontend",
   "private": true,
   "scripts": {
     "dev": "nuxt dev --port 3000",

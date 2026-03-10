@@ -1,12 +1,12 @@
-# Downloadino
+# Mirrorino
 
 Self-hosted GitHub-style file repository platform.
 
 ## Structure
 ```
-downloadino/
-├── backend/     FastAPI — api.downloadino.com
-├── frontend/    Nuxt 3 — downloadino.com
+mirrorino/
+├── backend/     FastAPI — api.mirrorino.com
+├── frontend/    Nuxt 3 — mirrorino.com
 ├── nginx/       Reverse proxy
 └── docker-compose.yml
 ```
@@ -22,13 +22,13 @@ docker compose pull
 docker compose up -d
 
 # 3. API docs available at:
-#    https://api.downloadino.com/api/docs
+#    https://api.mirrorino.com/api/docs
 ```
 
 `docker-compose.yml` is configured to use:
-- `voidtrek/downloadino_backend:latest`
-- `voidtrek/downloadino_frontend:latest`
-- `voidtrek/downloadino_nginx:latest`
+- `voidtrek/mirrorino_backend:latest`
+- `voidtrek/mirrorino_frontend:latest`
+- `voidtrek/mirrorino_nginx:latest`
 
 So on your server, you only need:
 - `docker-compose.yml`
@@ -41,9 +41,9 @@ No per-service `.env` files are required.
 Set these values in your root `.env` file to populate `/contact` page details:
 
 ```env
-NUXT_PUBLIC_SUPPORT_EMAIL=support@downloadino.com
-NUXT_PUBLIC_SUPPORT_TELEGRAM_ID=@downloadino_support
-NUXT_PUBLIC_SUPPORT_WEBSITE=https://downloadino.com
+NUXT_PUBLIC_SUPPORT_EMAIL=support@mirrorino.com
+NUXT_PUBLIC_SUPPORT_TELEGRAM_ID=@mirrorino_support
+NUXT_PUBLIC_SUPPORT_WEBSITE=https://mirrorino.com
 ```
 
 Then recreate the frontend container so Nuxt picks up new env values:
@@ -66,21 +66,21 @@ Run these commands from project root on your own machine:
 docker login
 
 # 2) Build images
-docker build -t voidtrek/downloadino_backend:latest ./backend
-docker build -t voidtrek/downloadino_frontend:latest ./frontend
-docker build -t voidtrek/downloadino_nginx:latest ./nginx
+docker build -t voidtrek/mirrorino_backend:latest ./backend
+docker build -t voidtrek/mirrorino_frontend:latest ./frontend
+docker build -t voidtrek/mirrorino_nginx:latest ./nginx
 
 # 3) Push images
-docker push voidtrek/downloadino_backend:latest
-docker push voidtrek/downloadino_frontend:latest
-docker push voidtrek/downloadino_nginx:latest
+docker push voidtrek/mirrorino_backend:latest
+docker push voidtrek/mirrorino_frontend:latest
+docker push voidtrek/mirrorino_nginx:latest
 ```
 
 If you want versioned releases too, tag before push (repeat for all three images):
 
 ```bash
-docker tag voidtrek/downloadino_backend:latest voidtrek/downloadino_backend:v1.0.0
-docker push voidtrek/downloadino_backend:v1.0.0
+docker tag voidtrek/mirrorino_backend:latest voidtrek/mirrorino_backend:v1.0.0
+docker push voidtrek/mirrorino_backend:v1.0.0
 ```
 
 ## Default admin

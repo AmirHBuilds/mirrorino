@@ -1,10 +1,10 @@
 services:
 
   api:
-    # image: voidtrek/downloadino_backend:latest
-    # image: downloadino-api
+    # image: voidtrek/mirrorino_backend:latest
+    # image: mirrorino-api
     build: ./backend
-    container_name: downloadino_api
+    container_name: mirrorino_api
     restart: unless-stopped
     env_file: ./.env
     volumes:
@@ -15,43 +15,43 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - downloadino_net
+      - mirrorino_net
 
   frontend:
-    # image: voidtrek/downloadino_frontend:latest
-    # image: downloadino-frontend
+    # image: voidtrek/mirrorino_frontend:latest
+    # image: mirrorino-frontend
     build: ./frontend
-    container_name: downloadino_frontend
+    container_name: mirrorino_frontend
     restart: unless-stopped
     environment:
-      - NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-https://api.downloadino.com}
+      - NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-https://api.mirrorino.com}
       - NUXT_PUBLIC_SUPPORT_EMAIL=${NUXT_PUBLIC_SUPPORT_EMAIL:-}
       - NUXT_PUBLIC_SUPPORT_TELEGRAM_ID=${NUXT_PUBLIC_SUPPORT_TELEGRAM_ID:-}
       - NUXT_PUBLIC_SUPPORT_WEBSITE=${NUXT_PUBLIC_SUPPORT_WEBSITE:-}
     networks:
-      - downloadino_net
+      - mirrorino_net
 
   db:
     image: postgres:16-alpine
-    container_name: downloadino_db
+    container_name: mirrorino_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: downloadino
+      POSTGRES_USER: mirrorino
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
-      POSTGRES_DB: downloadino
+      POSTGRES_DB: mirrorino
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U downloadino"]
+      test: ["CMD-SHELL", "pg_isready -U mirrorino"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - downloadino_net
+      - mirrorino_net
 
   redis:
     image: redis:7-alpine
-    container_name: downloadino_redis
+    container_name: mirrorino_redis
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass}
     volumes:
@@ -62,13 +62,13 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - downloadino_net
+      - mirrorino_net
 
   nginx:
-    # image: voidtrek/downloadino_nginx:latest
-    # image: downloadino-nginx
+    # image: voidtrek/mirrorino_nginx:latest
+    # image: mirrorino-nginx
     build: ./nginx
-    container_name: downloadino_nginx
+    container_name: mirrorino_nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -79,7 +79,7 @@ services:
       - api
       - frontend
     networks:
-      - downloadino_net
+      - mirrorino_net
 
 volumes:
   postgres_data:
@@ -87,5 +87,5 @@ volumes:
   file_data:
 
 networks:
-  downloadino_net:
+  mirrorino_net:
     driver: bridge
