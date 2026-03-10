@@ -20,6 +20,8 @@
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <RepoCard v-for="repo in repos" :key="repo.id" :repo="repo" />
     </div>
+
+    <AdSlot position="explore_inline" :limit="3" compact wrapper-class="mt-8" />
   </div>
 </template>
 

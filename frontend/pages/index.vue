@@ -25,6 +25,8 @@
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
         <RepoCard v-for="repo in repos" :key="repo.id" :repo="repo" />
       </div>
+
+      <AdSlot position="home_featured" :limit="2" wrapper-class="mt-2" />
     </section>
 
     <!-- Hero -->
@@ -60,6 +62,7 @@
       </div>
     </section>
 
+    <AdSlot position="home_inline" :limit="3" compact wrapper-class="max-w-7xl mx-auto px-4 py-8" />
   </div>
 </template>
 

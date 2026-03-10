@@ -11,7 +11,7 @@
         :class="cardClass(idx)"
         @click.prevent="openAd(ad)"
       >
-        <img :src="ad.image_url" :alt="ad.title" class="w-full h-24 object-cover" />
+        <AdMedia :src="ad.image_url" :alt="ad.title" />
         <div class="p-2.5 bg-surface-1/90">
           <span class="inline-block text-[10px] uppercase tracking-wide text-muted mb-1">Sponsored</span>
           <p class="text-xs font-semibold truncate">{{ ad.title }}</p>
@@ -24,16 +24,9 @@
 <script setup lang="ts">
 import type { Ad } from '~/types'
 
-const { get, post } = useApi()
+const { ads, trackClick } = useAds()
 
-const { data } = await useAsyncData(
-  'active-ads-bar',
-  () => get<Ad[]>('/api/ads/active'),
-  { server: false, default: () => [] },
-)
-
-const ads = computed(() => data.value || [])
-const visibleAds = computed(() => ads.value.slice(0, 3))
+const visibleAds = computed(() => ads.value.filter((ad) => ad.position === 'banner').slice(0, 3))
 
 const containerClass = computed(() => {
   const count = visibleAds.value.length
@@ -50,11 +43,7 @@ function cardClass(idx: number) {
 }
 
 async function openAd(ad: Ad) {
-  try {
-    await post<{ target_url: string }>(`/api/ads/${ad.id}/click`, {})
-  } catch {
-    // ignore tracking issues and still open ad
-  }
+  await trackClick(ad.id)
   window.open(ad.target_url, '_blank', 'noopener')
 }
 </script>

@@ -94,6 +94,8 @@
         </div>
       </div>
 
+      <AdSlot position="repo_inline" :limit="2" compact wrapper-class="mt-6" />
+
       <div v-if="readmeContent" class="card p-4 mt-6">
         <p class="text-xs text-muted font-mono uppercase tracking-wider mb-3">README.md</p>
         <div class="markdown-body" v-html="readmeHtml"></div>
