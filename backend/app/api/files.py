@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile, Request, Form
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,9 +10,10 @@ from app.core.rate_limiter import limiter, upload_limiter
 from app.core.storage import get_file_content, get_presigned_url, update_file_content
 from app.models.repo import Repo
 from app.models.file import File
+from app.models.directory import Directory
 from app.models.user import User
-from app.schemas.file import FileResponse, FileUploadResult
-from app.services.file_service import upload_file, delete_file_record
+from app.schemas.file import FileResponse, FileUploadResult, RepoTreeResponse, DirectoryCreate, DirectoryResponse
+from app.services.file_service import upload_file, delete_file_record, normalize_directory_path, ensure_directory_exists
 
 router = APIRouter(tags=["Files"])
 
@@ -28,6 +29,60 @@ async def _get_repo_by_identity(db: AsyncSession, username: str, repo_slug: str)
         .where(User.username == username, Repo.slug == repo_slug)
     )
     return result.scalar_one_or_none()
+
+
+@router.get("/users/{username}/repos/{repo_slug}/tree", response_model=RepoTreeResponse)
+async def list_repo_tree(username: str, repo_slug: str, path: str = "", db: AsyncSession = Depends(get_db)):
+    repo = await _get_repo_by_identity(db, username, repo_slug)
+    if not repo or not repo.is_public:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    normalized = normalize_directory_path(path)
+    files_result = await db.execute(select(File).where(File.repo_id == repo.id, File.directory_path == normalized).order_by(File.uploaded_at.desc()))
+    files = files_result.scalars().all()
+
+    dirs_result = await db.execute(select(Directory.path).where(Directory.repo_id == repo.id))
+    all_dirs = dirs_result.scalars().all()
+    prefix = f"{normalized}/" if normalized else ""
+    children: set[str] = set()
+    for directory in all_dirs:
+        if prefix and not directory.startswith(prefix):
+            continue
+        if not prefix and "/" in directory:
+            children.add(directory.split("/", 1)[0])
+            continue
+        remainder = directory[len(prefix):] if prefix else directory
+        if not remainder:
+            continue
+        child = remainder.split("/", 1)[0]
+        if child:
+            children.add(child)
+
+    return RepoTreeResponse(path=normalized, directories=sorted(children), files=files)
+
+
+@router.post("/users/{username}/repos/{repo_slug}/directories", response_model=DirectoryResponse, status_code=201)
+async def create_repo_directory(
+    username: str,
+    repo_slug: str,
+    payload: DirectoryCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repo = await _get_repo_by_identity(db, username, repo_slug)
+    if not repo or repo.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Repository not found or access denied")
+
+    normalized = normalize_directory_path(payload.path)
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Directory path is required")
+
+    await ensure_directory_exists(repo.id, normalized, db)
+    result = await db.execute(select(Directory).where(Directory.repo_id == repo.id, Directory.path == normalized))
+    directory = result.scalar_one_or_none()
+    if not directory:
+        raise HTTPException(status_code=500, detail="Directory could not be created")
+    return directory
 
 @router.get("/repos/{repo_id}/files", response_model=list[FileResponse])
 async def list_repo_files(repo_id: int, db: AsyncSession = Depends(get_db)):
@@ -48,12 +103,12 @@ async def list_repo_files_by_identity(username: str, repo_slug: str, db: AsyncSe
 
 @router.post("/repos/{repo_id}/files", response_model=FileUploadResult, status_code=201)
 @upload_limiter.limit("10/hour")
-async def upload_to_repo(request: Request, repo_id: int, file: UploadFile = FastAPIFile(...), db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def upload_to_repo(request: Request, repo_id: int, file: UploadFile = FastAPIFile(...), directory_path: str = Form(default=""), db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(select(Repo).where(Repo.id == repo_id, Repo.owner_id == current_user.id))
     repo = result.scalar_one_or_none()
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found or access denied")
-    file_record = await upload_file(file, repo, current_user, db)
+    file_record = await upload_file(file, repo, current_user, db, directory_path=directory_path)
     return FileUploadResult(file=file_record, storage_remaining=current_user.storage_remaining, storage_usage_percent=current_user.storage_usage_percent)
 
 
@@ -64,13 +119,14 @@ async def upload_to_repo_by_identity(
     username: str,
     repo_slug: str,
     file: UploadFile = FastAPIFile(...),
+    directory_path: str = Form(default=""),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     repo = await _get_repo_by_identity(db, username, repo_slug)
     if not repo or repo.owner_id != current_user.id:
         raise HTTPException(status_code=404, detail="Repository not found or access denied")
-    file_record = await upload_file(file, repo, current_user, db)
+    file_record = await upload_file(file, repo, current_user, db, directory_path=directory_path)
     return FileUploadResult(file=file_record, storage_remaining=current_user.storage_remaining, storage_usage_percent=current_user.storage_usage_percent)
 
 @router.get("/files/{file_id}/download")

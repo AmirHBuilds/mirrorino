@@ -8,6 +8,7 @@ class File(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     repo_id: Mapped[int] = mapped_column(Integer, ForeignKey("repos.id", ondelete="CASCADE"), nullable=False)
     original_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    directory_path: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     stored_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     detected_type: Mapped[str] = mapped_column(String(100), nullable=False)

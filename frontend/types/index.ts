@@ -29,6 +29,7 @@ export interface Repo {
 export interface RepoFile {
   id: number
   original_name: string
+  directory_path: string
   stored_name: string
   mime_type: string
   detected_type: string

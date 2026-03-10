@@ -49,15 +49,31 @@
       <div class="card overflow-hidden">
         <div class="px-4 py-3 border-b border-border flex items-center justify-between">
           <span class="text-sm font-semibold">Files</span>
-          <span class="text-xs text-muted font-mono">{{ files?.length || 0 }} files</span>
+          <span class="text-xs text-muted font-mono">{{ tree?.files?.length || 0 }} files · {{ tree?.directories?.length || 0 }} folders</span>
         </div>
-        <div v-if="!files?.length" class="py-16 text-center text-muted">
+        <div class="px-4 py-2 border-b border-border flex items-center gap-2 text-xs font-mono">
+          <button class="hover:underline" @click="navigateToPath('')">root</button>
+          <template v-for="(segment, index) in breadcrumbSegments" :key="`${segment}-${index}`">
+            <span>/</span>
+            <button class="hover:underline" @click="navigateToPath(breadcrumbPaths[index])">{{ segment }}</button>
+          </template>
+        </div>
+        <div v-if="!tree?.files?.length && !tree?.directories?.length" class="py-16 text-center text-muted">
           <Icon name="mdilocal:folder-open-outline" class="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p class="text-sm">No files uploaded yet</p>
+          <p class="text-sm">No files or directories yet</p>
         </div>
         <div v-else class="divide-y divide-border">
+          <button
+            v-for="dir in tree?.directories || []"
+            :key="`dir-${dir}`"
+            class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2/50 transition-colors text-left"
+            @click="navigateToPath(joinPath(currentPath, dir))"
+          >
+            <Icon name="mdilocal:folder-open-outline" class="w-4 h-4 text-muted shrink-0" />
+            <span class="text-sm font-mono text-accent-2">{{ dir }}</span>
+          </button>
           <FileRow
-            v-for="file in files"
+            v-for="file in tree?.files || []"
             :key="file.id"
             :file="file"
             :repo-username="repo.owner.username"
@@ -68,6 +84,15 @@
             @edit="startEditFile"
           />
         </div>
+      </div>
+
+      <div v-if="isOwner" class="mt-4 card p-4">
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <input v-model="newDirectory" class="input flex-1" placeholder="Create folder in current path (e.g. docs)" />
+          <button class="btn-secondary text-sm py-1.5" @click="createDirectory">Create folder</button>
+        </div>
+        <p class="text-xs text-muted mt-2">Uploading and folder creation happen inside: /{{ currentPath || '' }}</p>
+        <UploadZone :repo-username="repo.owner.username" :repo-slug="repo.slug" :directory-path="currentPath" @uploaded="refreshTree" />
       </div>
 
       <div v-if="isEditingFile" class="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-4" @click.self="cancelEdit">
@@ -133,19 +158,29 @@ const { data: repo, pending, refresh: refreshRepo } = await useAsyncData(
   { server: false, default: () => null },
 )
 
-const { data: files, refresh: refreshFiles } = await useAsyncData(
-  () => `repo-files:${repo.value?.owner.username || route.params.username}:${repo.value?.slug || route.params.slug}`,
+const currentPath = ref('')
+const newDirectory = ref('')
+
+interface RepoTree {
+  path: string
+  directories: string[]
+  files: RepoFile[]
+}
+
+const { data: tree, refresh: refreshTree } = await useAsyncData(
+  () => `repo-tree:${repo.value?.owner.username || route.params.username}:${repo.value?.slug || route.params.slug}:${currentPath.value}`,
   async () => {
-    if (!repo.value) return []
-    return get<RepoFile[]>(`/api/users/${repo.value.owner.username}/repos/${repo.value.slug}/files`)
+    if (!repo.value) return { path: '', directories: [], files: [] }
+    const query = currentPath.value ? `?path=${encodeURIComponent(currentPath.value)}` : ''
+    return get<RepoTree>(`/api/users/${repo.value.owner.username}/repos/${repo.value.slug}/tree${query}`)
   },
-  { watch: [repo], server: false, default: () => [] },
+  { watch: [repo, currentPath], server: false, default: () => ({ path: '', directories: [], files: [] }) },
 )
 
 const isOwner = computed(() => isLoggedIn.value && !!repo.value && user.value?.id === repo.value.owner.id)
 const displayStatus = computed(() => repo.value ? visibleVerificationStatus(repo.value.verification_status, !!isOwner.value) : 'unverified')
 
-const readmeFile = computed(() => files.value?.find((file) => file.original_name.toLowerCase() === 'readme.md') ?? null)
+const readmeFile = computed(() => tree.value?.files?.find((file) => file.original_name.toLowerCase() === 'readme.md' && !file.directory_path) ?? null)
 
 const { data: readmeContent } = await useAsyncData(
   () => `repo-readme:${repo.value?.owner.username || route.params.username}:${repo.value?.slug || route.params.slug}:${readmeFile.value?.id || 0}`,
@@ -163,7 +198,8 @@ async function startEditFile(file: RepoFile) {
   editingFile.value = file
   isEditingFile.value = true
   try {
-    const response = await fetch(`${apiBase}/raw/${repo.value?.owner.username}/${repo.value?.slug}/${encodeURIComponent(file.original_name)}`)
+    const fullPath = file.directory_path ? `${file.directory_path}/${file.original_name}` : file.original_name
+    const response = await fetch(`${apiBase}/raw/${repo.value?.owner.username}/${repo.value?.slug}/${encodeURIComponent(fullPath)}`)
     if (!response.ok) throw new Error('Failed to fetch current file content')
     editContent.value = await response.text()
   } catch {
@@ -185,7 +221,7 @@ async function saveEditedFile() {
   editError.value = ''
   try {
     await put(`/api/files/${editingFile.value.id}/content`, { content: editContent.value })
-    await Promise.all([refreshFiles(), refreshRepo()])
+    await Promise.all([refreshTree(), refreshRepo()])
     cancelEdit()
   } catch (error: any) {
     editError.value = error?.message || 'Failed to save file.'
@@ -282,6 +318,25 @@ function markdownToHtml(content: string) {
 
 const readmeHtml = computed(() => (readmeContent.value ? markdownToHtml(readmeContent.value) : ''))
 
+const breadcrumbSegments = computed(() => (currentPath.value ? currentPath.value.split('/') : []))
+const breadcrumbPaths = computed(() => breadcrumbSegments.value.map((_, index) => breadcrumbSegments.value.slice(0, index + 1).join('/')))
+
+function joinPath(base: string, next: string) {
+  return [base, next].filter(Boolean).join('/')
+}
+
+function navigateToPath(path: string) {
+  currentPath.value = path
+}
+
+async function createDirectory() {
+  if (!repo.value || !newDirectory.value.trim()) return
+  const target = joinPath(currentPath.value, newDirectory.value.trim())
+  await post(`/api/users/${repo.value.owner.username}/repos/${repo.value.slug}/directories`, { path: target })
+  newDirectory.value = ''
+  await refreshTree()
+}
+
 async function requestVerify() {
   try {
     await post(`/api/repos/${repo.value?.id}/request-verification`, {})
@@ -291,7 +346,7 @@ async function requestVerify() {
 
 async function onDeleteFile(id: number) {
   await del(`/api/files/${id}`)
-  await refreshFiles()
+  await refreshTree()
 }
 
 useSeoMeta({ title: computed(() => `${route.params.username}/${route.params.slug}`) })

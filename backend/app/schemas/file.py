@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class FileResponse(BaseModel):
     id: int
     original_name: str
+    directory_path: str
     stored_name: str
     mime_type: str
     detected_type: str
@@ -11,6 +12,23 @@ class FileResponse(BaseModel):
     download_count: int
     uploaded_at: datetime
     model_config = {"from_attributes": True}
+
+
+class DirectoryCreate(BaseModel):
+    path: str
+
+
+class DirectoryResponse(BaseModel):
+    id: int
+    path: str
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class RepoTreeResponse(BaseModel):
+    path: str
+    directories: list[str]
+    files: list[FileResponse]
 
 class FileUploadResult(BaseModel):
     file: FileResponse

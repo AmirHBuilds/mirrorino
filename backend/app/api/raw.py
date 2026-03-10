@@ -32,7 +32,19 @@ async def get_raw_file(request: Request, username: str, repo_slug: str, filename
     if not repo:
         raise HTTPException(status_code=404, detail=f"Repository '{repo_slug}' not found or is private")
 
-    file_r = await db.execute(select(File).where(File.repo_id == repo.id, File.original_name == filename))
+    normalized = filename.strip("/")
+    if "/" in normalized:
+        directory_path, original_name = normalized.rsplit("/", 1)
+    else:
+        directory_path, original_name = "", normalized
+
+    file_r = await db.execute(
+        select(File).where(
+            File.repo_id == repo.id,
+            File.original_name == original_name,
+            File.directory_path == directory_path,
+        )
+    )
     file = file_r.scalar_one_or_none()
     if not file:
         raise HTTPException(status_code=404, detail=f"File '{filename}' not found")

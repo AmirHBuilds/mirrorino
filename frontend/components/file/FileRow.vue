@@ -27,6 +27,7 @@ import type { RepoFile } from '~/types'
 const props = defineProps<{ file: RepoFile; repoUsername: string; repoSlug: string; canDelete?: boolean; canEdit?: boolean }>()
 defineEmits<{ delete: [id: number]; edit: [file: RepoFile] }>()
 const apiBase = useRuntimeConfig().public.apiBase
-const rawHref = computed(() => `${apiBase}/raw/${props.repoUsername}/${props.repoSlug}/${encodeURIComponent(props.file.original_name)}`)
+const fullPath = computed(() => props.file.directory_path ? `${props.file.directory_path}/${props.file.original_name}` : props.file.original_name)
+const rawHref = computed(() => `${apiBase}/raw/${props.repoUsername}/${props.repoSlug}/${encodeURIComponent(fullPath.value)}`)
 const downloadHref = computed(() => `${apiBase}/api/users/${props.repoUsername}/repos/${props.repoSlug}/files/${props.file.id}/download`)
 </script>
