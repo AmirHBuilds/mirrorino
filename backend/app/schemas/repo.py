@@ -42,3 +42,9 @@ class RepoVerifyRequest(BaseModel):
 class AdminVerifyAction(BaseModel):
     action: str
     note: str | None = None
+
+
+class AdminRepoUpdate(BaseModel):
+    verification_status: VerificationStatus | None = None
+    verification_note: str | None = None
+    is_public: bool | None = None

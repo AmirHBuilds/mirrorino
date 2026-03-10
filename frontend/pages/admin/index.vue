@@ -26,6 +26,8 @@
             <span v-if="stats?.pending_verifications" class="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded-full font-mono">{{ stats.pending_verifications }}</span>
           </NuxtLink>
           <NuxtLink to="/admin/users" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:account-group-outline" class="w-4 h-4 text-accent-2" /> Manage Users</NuxtLink>
+          <NuxtLink to="/admin/statistics" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:chart-line" class="w-4 h-4 text-accent-2" /> View Statistics</NuxtLink>
+          <NuxtLink to="/admin/repos" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:source-repository" class="w-4 h-4 text-accent-2" /> Manage Repositories</NuxtLink>
           <NuxtLink to="/admin/ads" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:advertisements" class="w-4 h-4 text-accent-2" /> Manage Ads</NuxtLink>
         </div>
       </div>

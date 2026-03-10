@@ -23,6 +23,7 @@ class AdResponse(BaseModel):
     image_url: str
     target_url: str
     position: str
+    description: str | None = None
     is_active: bool
     click_count: int
     created_at: datetime
