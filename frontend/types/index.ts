@@ -43,6 +43,7 @@ export interface Ad {
   image_url: string
   target_url: string
   position: string
+  description: string | null
   is_active: boolean
   click_count: number
   created_at: string
@@ -55,4 +56,39 @@ export interface AdminStats {
   total_storage_bytes: number
   pending_verifications: number
   banned_users: number
+}
+
+export interface AdminPermissions {
+  manage_users: boolean
+  manage_repos: boolean
+  manage_ads: boolean
+  view_stats: boolean
+}
+
+export interface AdminAccount {
+  id: number
+  username: string
+  email: string
+  role: 'admin' | 'superadmin'
+  created_at: string
+  permissions: AdminPermissions
+}
+
+export interface AdminAnalytics {
+  totals: {
+    users: number
+    repos: number
+    files: number
+    storage_bytes: number
+    downloads: number
+  }
+  growth: {
+    users_7d: number
+    repos_7d: number
+    files_7d: number
+    users_current_7d: number
+    repos_current_7d: number
+    files_current_7d: number
+  }
+  timeline: Array<{ day: string; users: number; repos: number; files: number }>
 }
