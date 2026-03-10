@@ -59,6 +59,19 @@ async def get_file_content(storage_path: str) -> bytes:
         async with aiofiles.open(full, "rb") as f:
             return await f.read()
 
+async def update_file_content(storage_path: str, content: bytes, original_filename: str) -> None:
+    if settings.STORAGE_BACKEND == "s3":
+        async with _s3_session().client("s3", endpoint_url=settings.S3_ENDPOINT_URL, config=Config(signature_version="s3v4")) as s3:
+            try:
+                await s3.put_object(Bucket=settings.S3_BUCKET_NAME, Key=storage_path, Body=content, ContentDisposition=f'attachment; filename="{original_filename}"')
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Storage error: {e}")
+    else:
+        full = os.path.join(settings.LOCAL_STORAGE_PATH, storage_path)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        async with aiofiles.open(full, "wb") as f:
+            await f.write(content)
+
 async def get_presigned_url(storage_path: str, original_filename: str, expires: int = 3600) -> str | None:
     if settings.STORAGE_BACKEND != "s3":
         return None

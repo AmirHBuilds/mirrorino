@@ -63,8 +63,34 @@
             :repo-username="repo.owner.username"
             :repo-slug="repo.slug"
             :can-delete="isOwner"
+            :can-edit="isOwner"
             @delete="onDeleteFile"
+            @edit="startEditFile"
           />
+        </div>
+      </div>
+
+      <div v-if="isEditingFile" class="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-4" @click.self="cancelEdit">
+        <div class="card w-full max-w-4xl p-4">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 class="text-sm font-semibold">Edit file</h3>
+              <p class="text-xs text-muted font-mono">{{ editingFile?.original_name }}</p>
+            </div>
+            <button class="btn-ghost py-1 px-2 text-xs" @click="cancelEdit">Close</button>
+          </div>
+          <p v-if="editError" class="text-xs text-danger mb-2">{{ editError }}</p>
+          <textarea
+            v-model="editContent"
+            class="w-full min-h-[360px] rounded-md border border-border bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent"
+            placeholder="File content"
+          />
+          <div class="flex justify-end gap-2 mt-3">
+            <button class="btn-secondary text-sm py-1.5" @click="cancelEdit" :disabled="savingEdit">Cancel</button>
+            <button class="btn-primary text-sm py-1.5" @click="saveEditedFile" :disabled="savingEdit">
+              {{ savingEdit ? 'Saving...' : 'Save changes' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -83,9 +109,15 @@ import type { Repo, RepoFile } from '~/types'
 import { visibleVerificationStatus } from '~/utils/repo'
 
 const route = useRoute()
-const { get, post, delete: del } = useApi()
+const { get, post, put, delete: del } = useApi()
 const apiBase = useRuntimeConfig().public.apiBase
 const { user, isLoggedIn } = useAuth()
+
+const isEditingFile = ref(false)
+const editingFile = ref<RepoFile | null>(null)
+const editContent = ref('')
+const editError = ref('')
+const savingEdit = ref(false)
 
 const { data: repo, pending, refresh: refreshRepo } = await useAsyncData(
   () => `repo-detail:${route.params.username}:${route.params.slug}`,
@@ -123,6 +155,42 @@ const { data: readmeContent } = await useAsyncData(
   },
   { watch: [repo, readmeFile], server: false, default: () => null },
 )
+
+async function startEditFile(file: RepoFile) {
+  editError.value = ''
+  editingFile.value = file
+  isEditingFile.value = true
+  try {
+    const response = await fetch(`${apiBase}/raw/${repo.value?.owner.username}/${repo.value?.slug}/${encodeURIComponent(file.original_name)}`)
+    if (!response.ok) throw new Error('Failed to fetch current file content')
+    editContent.value = await response.text()
+  } catch {
+    editContent.value = ''
+    editError.value = 'Could not load current file content.'
+  }
+}
+
+function cancelEdit() {
+  isEditingFile.value = false
+  editingFile.value = null
+  editContent.value = ''
+  editError.value = ''
+}
+
+async function saveEditedFile() {
+  if (!editingFile.value) return
+  savingEdit.value = true
+  editError.value = ''
+  try {
+    await put(`/api/files/${editingFile.value.id}/content`, { content: editContent.value })
+    await Promise.all([refreshFiles(), refreshRepo()])
+    cancelEdit()
+  } catch (error: any) {
+    editError.value = error?.message || 'Failed to save file.'
+  } finally {
+    savingEdit.value = false
+  }
+}
 
 function escapeHtml(content: string) {
   return content
