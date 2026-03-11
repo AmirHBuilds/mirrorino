@@ -78,6 +78,7 @@ async def create_repo_directory(
         raise HTTPException(status_code=400, detail="Directory path is required")
 
     await ensure_directory_exists(repo.id, normalized, db)
+    await db.flush()
     result = await db.execute(select(Directory).where(Directory.repo_id == repo.id, Directory.path == normalized))
     directory = result.scalar_one_or_none()
     if not directory:
