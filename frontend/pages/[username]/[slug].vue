@@ -52,13 +52,16 @@
           <span class="text-xs text-muted font-mono">{{ tree?.files?.length || 0 }} files · {{ tree?.directories?.length || 0 }} folders</span>
         </div>
         <div v-if="breadcrumbSegments.length" class="px-4 py-2 border-b border-border flex items-center gap-1.5 text-xs font-mono text-muted">
-          <button class="hover:underline text-foreground" @click="navigateToPath('')">root</button>
+          <button class="hover:underline text-foreground disabled:opacity-60 disabled:cursor-not-allowed" :disabled="isDirectorySwitching" @click="navigateToPath('')">root</button>
           <span>/</span>
           <template v-for="(segment, index) in breadcrumbSegments" :key="`${segment}-${index}`">
-            <button v-if="index < breadcrumbSegments.length - 1" class="hover:underline text-foreground" @click="navigateToPath(breadcrumbPaths[index])">{{ segment }}</button>
+            <button v-if="index < breadcrumbSegments.length - 1" class="hover:underline text-foreground disabled:opacity-60 disabled:cursor-not-allowed" :disabled="isDirectorySwitching" @click="navigateToPath(breadcrumbPaths[index])">{{ segment }}</button>
             <span v-else class="text-foreground">{{ segment }}</span>
             <span v-if="index < breadcrumbSegments.length - 1">/</span>
           </template>
+        </div>
+        <div v-if="isDirectorySwitching" class="h-1 w-full bg-surface-2 overflow-hidden border-b border-border">
+          <div class="h-full w-1/3 bg-accent/70 animate-pulse"></div>
         </div>
         <div v-if="!tree?.files?.length && !tree?.directories?.length" class="py-16 text-center text-muted">
           <Icon name="mdilocal:folder-directory" class="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -69,7 +72,7 @@
             v-for="dir in tree?.directories || []"
             :key="`dir-${dir}`"
             class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2/50 transition-colors text-left"
-            :disabled="treePending || isNavigatingPath"
+            :disabled="isDirectorySwitching"
             @click="openDirectory(dir)"
           >
             <Icon name="mdilocal:folder-directory" class="w-4 h-4 text-muted shrink-0" />
@@ -339,6 +342,7 @@ const readmeHtml = computed(() => (readmeContent.value ? markdownToHtml(readmeCo
 
 const breadcrumbSegments = computed(() => (currentPath.value ? currentPath.value.split('/') : []))
 const breadcrumbPaths = computed(() => breadcrumbSegments.value.map((_, index) => breadcrumbSegments.value.slice(0, index + 1).join('/')))
+const isDirectorySwitching = computed(() => treePending.value || isNavigatingPath.value)
 
 function joinPath(base: string, next: string) {
   return [base, next].filter(Boolean).join('/')
@@ -355,11 +359,11 @@ async function navigateToPath(path: string) {
   isNavigatingPath.value = true
   loadingIndicator.start()
   try {
+    currentPath.value = normalized
     await router.push({
       path: route.path,
       query: normalized ? { ...route.query, path: normalized } : Object.fromEntries(Object.entries(route.query).filter(([key]) => key !== 'path')),
     })
-    await refreshTree()
   } finally {
     isNavigatingPath.value = false
     loadingIndicator.finish()
