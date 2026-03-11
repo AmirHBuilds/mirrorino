@@ -51,11 +51,11 @@
           <span class="text-sm font-semibold">Files</span>
           <span class="text-xs text-muted font-mono">{{ tree?.files?.length || 0 }} files · {{ tree?.directories?.length || 0 }} folders</span>
         </div>
-        <div class="px-4 py-2 border-b border-border flex items-center gap-2 text-xs font-mono">
-          <button class="hover:underline" @click="navigateToPath('')">root</button>
+        <div class="px-4 py-2 border-b border-border flex items-center gap-1.5 text-xs font-mono text-muted">
+          <span>/</span>
           <template v-for="(segment, index) in breadcrumbSegments" :key="`${segment}-${index}`">
-            <span>/</span>
-            <button class="hover:underline" @click="navigateToPath(breadcrumbPaths[index])">{{ segment }}</button>
+            <button class="hover:underline text-foreground" @click="navigateToPath(breadcrumbPaths[index])">{{ segment }}</button>
+            <span v-if="index < breadcrumbSegments.length - 1">/</span>
           </template>
         </div>
         <div v-if="!tree?.files?.length && !tree?.directories?.length" class="py-16 text-center text-muted">
@@ -86,12 +86,14 @@
         </div>
       </div>
 
-      <div v-if="isOwner" class="mt-4 card p-4">
+      <div v-if="isOwner" class="mt-4 card p-4 space-y-3">
+        <div class="rounded-md border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
+          Uploading and folder creation happen inside: <span class="font-mono text-foreground">/{{ currentPath || '' }}</span>
+        </div>
         <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
           <input v-model="newDirectory" class="input flex-1" placeholder="Create folder in current path (e.g. docs)" />
           <button class="btn-secondary text-sm py-1.5" @click="createDirectory">Create folder</button>
         </div>
-        <p class="text-xs text-muted mt-2">Uploading and folder creation happen inside: /{{ currentPath || '' }}</p>
         <UploadZone :repo-username="repo.owner.username" :repo-slug="repo.slug" :directory-path="currentPath" @uploaded="refreshTree" />
       </div>
 
