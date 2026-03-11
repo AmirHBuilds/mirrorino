@@ -7,7 +7,7 @@
     <span class="text-xs text-muted font-mono hidden lg:flex items-center gap-1">
       <Icon name="mdilocal:download-outline" class="w-3.5 h-3.5" />{{ file.download_count }}
     </span>
-    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div class="flex items-center gap-1 opacity-100">
       <button v-if="canEdit" @click="$emit('edit', file)" class="btn-ghost py-1 px-2 text-xs" :aria-label="`Edit ${file.original_name}`" title="Edit file">
         <Icon name="mdilocal:pencil-outline" class="w-3.5 h-3.5" />
       </button>
