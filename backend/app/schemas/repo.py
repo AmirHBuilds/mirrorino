@@ -29,6 +29,7 @@ class RepoResponse(BaseModel):
     is_public: bool
     verification_status: VerificationStatus
     download_count: int
+    clone_count: int
     owner: UserPublic
     file_count: int = 0
     total_size: int = 0

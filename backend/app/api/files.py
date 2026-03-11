@@ -61,6 +61,7 @@ async def clone_repo_archive(request: Request, username: str, repo_slug: str, db
 
     archive_file.seek(0)
     repo.download_count += 1
+    repo.clone_count += 1
     await db.commit()
 
     return StreamingResponse(

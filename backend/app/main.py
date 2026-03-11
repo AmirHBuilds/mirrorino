@@ -29,6 +29,7 @@ async def _initialize_database():
         await conn.execute(text("SELECT pg_advisory_lock(:lock_id)"), {"lock_id": STARTUP_LOCK_ID})
         try:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.execute(text("ALTER TABLE repos ADD COLUMN IF NOT EXISTS clone_count INTEGER NOT NULL DEFAULT 0"))
         finally:
             await conn.execute(text("SELECT pg_advisory_unlock(:lock_id)"), {"lock_id": STARTUP_LOCK_ID})
 
