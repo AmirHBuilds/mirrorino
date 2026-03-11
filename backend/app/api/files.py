@@ -33,7 +33,7 @@ async def _get_repo_by_identity(db: AsyncSession, username: str, repo_slug: str)
     return result.scalar_one_or_none()
 
 
-@router.get("/users/{username}/repos/{repo_slug}/clone")
+@router.get("/{username}/{repo_slug}/clone")
 @limiter.limit("10/hour")
 async def clone_repo_archive(request: Request, username: str, repo_slug: str, db: AsyncSession = Depends(get_db)):
     repo = await _get_repo_by_identity(db, username, repo_slug)
