@@ -3,7 +3,9 @@
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
       <div>
         <h1 class="text-xl font-bold">Ads manager</h1>
-        <p class="text-sm text-muted mt-1">Create placements for banner, homepage, explore and repository pages. GIF and video links are supported.</p>
+        <p class="text-sm text-muted mt-1">
+          Create placements for banner, homepage, explore and repository pages. GIF, image, and video links are supported.
+        </p>
       </div>
       <button @click="openCreate" class="btn-primary text-sm py-1.5">
         <Icon name="mdilocal:plus" class="w-4 h-4" /> New Ad
@@ -31,7 +33,7 @@
         <div class="flex-1 min-w-0">
           <p class="font-medium text-sm">{{ ad.title }}</p>
           <p class="text-xs text-muted truncate">{{ ad.target_url }}</p>
-          <p class="text-xs text-muted font-mono mt-0.5">{{ ad.position }} · {{ ad.click_count }} clicks</p>
+          <p class="text-xs text-muted font-mono mt-0.5">{{ positionLabel(ad.position) }} · {{ ad.click_count }} clicks</p>
           <p v-if="ad.description" class="text-xs text-muted mt-2 line-clamp-2">{{ ad.description }}</p>
         </div>
         <div class="flex flex-col items-end gap-2 shrink-0">
@@ -49,14 +51,19 @@
         <h2 class="text-lg font-semibold mb-4">{{ editingId ? 'Edit Advertisement' : 'New Advertisement' }}</h2>
         <div class="space-y-3">
           <div><label class="text-xs text-muted block mb-1.5">Title</label><input v-model="form.title" class="input" /></div>
-          <div><label class="text-xs text-muted block mb-1.5">Media URL (image / GIF / mp4)</label><input v-model="form.image_url" class="input" /></div>
+          <div>
+            <label class="text-xs text-muted block mb-1.5">Media URL (image / GIF / mp4)</label>
+            <input v-model="form.image_url" class="input" />
+            <p class="text-[11px] text-muted mt-1">Recommended sizes: banner 1200×320, featured/inline 1200×628, repository inline 900×360.</p>
+          </div>
           <div><label class="text-xs text-muted block mb-1.5">Target URL</label><input v-model="form.target_url" class="input" /></div>
           <div><label class="text-xs text-muted block mb-1.5">Description</label><textarea v-model="form.description" rows="3" class="input" /></div>
           <div>
-            <label class="text-xs text-muted block mb-1.5">Placement</label>
-            <select v-model="form.position" class="input">
+            <label class="text-xs text-muted block mb-1.5">Placements (select one or more)</label>
+            <select v-model="selectedPlacements" class="input min-h-32" multiple>
               <option v-for="option in placementOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
+            <p class="text-[11px] text-muted mt-1">Tip: Hold Ctrl/Cmd to select multiple placements for one ad.</p>
           </div>
           <label class="text-xs text-muted flex items-center gap-2"><input type="checkbox" v-model="form.is_active" /> Active</label>
 
@@ -96,20 +103,40 @@ const placementOptions = [
   { value: 'inline', label: 'Legacy inline' },
 ]
 
+const placementLabelMap = Object.fromEntries(placementOptions.map((option) => [option.value, option.label]))
+
+function adPositions(position: string) {
+  return position
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function positionLabel(position: string) {
+  return adPositions(position)
+    .map((item) => placementLabelMap[item] || item)
+    .join(', ')
+}
+
 const query = ref('')
 const statusFilter = ref<'all' | 'active' | 'inactive'>('all')
 const positionFilter = ref('all')
 
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
+const selectedPlacements = ref<string[]>(['banner'])
 const form = reactive({ title: '', image_url: '', target_url: '', description: '', position: 'banner', is_active: true })
+
+watch(selectedPlacements, (placements) => {
+  form.position = placements.join(',')
+})
 
 const filteredAds = computed(() => {
   const list = ads.value || []
   return list.filter((ad) => {
     if (statusFilter.value === 'active' && !ad.is_active) return false
     if (statusFilter.value === 'inactive' && ad.is_active) return false
-    if (positionFilter.value !== 'all' && ad.position !== positionFilter.value) return false
+    if (positionFilter.value !== 'all' && !adPositions(ad.position).includes(positionFilter.value)) return false
     if (!query.value.trim()) return true
 
     const keyword = query.value.toLowerCase()
@@ -124,6 +151,7 @@ function resetForm() {
   form.description = ''
   form.position = 'banner'
   form.is_active = true
+  selectedPlacements.value = ['banner']
 }
 
 function openCreate() {
@@ -140,11 +168,16 @@ function openEdit(ad: Ad) {
   form.description = ad.description || ''
   form.position = ad.position
   form.is_active = ad.is_active
+  selectedPlacements.value = adPositions(ad.position)
   showModal.value = true
 }
 
 async function saveAd() {
-  const payload = { ...form, description: form.description || null }
+  if (!selectedPlacements.value.length) {
+    alert('Please select at least one placement.')
+    return
+  }
+  const payload = { ...form, position: selectedPlacements.value.join(','), description: form.description || null }
   if (editingId.value) await put(`/api/admin/ads/${editingId.value}`, payload)
   else await post('/api/admin/ads', payload)
   showModal.value = false

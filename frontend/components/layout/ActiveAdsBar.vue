@@ -11,7 +11,9 @@
         :class="cardClass(idx)"
         @click.prevent="openAd(ad)"
       >
-        <AdMedia :src="ad.image_url" :alt="ad.title" />
+        <div class="h-24 sm:h-28 lg:h-32 bg-surface-2">
+          <AdMedia :src="ad.image_url" :alt="ad.title" />
+        </div>
         <div class="p-2.5 bg-surface-1/90">
           <span class="inline-block text-[10px] uppercase tracking-wide text-muted mb-1">Sponsored</span>
           <p class="text-xs font-semibold truncate">{{ ad.title }}</p>
@@ -26,7 +28,32 @@ import type { Ad } from '~/types'
 
 const { ads, trackClick } = useAds()
 
-const visibleAds = computed(() => ads.value.filter((ad) => ad.position === 'banner').slice(0, 3))
+function adPositions(position: string) {
+  return position
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function pickRandomAds(list: Ad[], limit: number) {
+  const shuffled = [...list]
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled.slice(0, limit)
+}
+
+const visibleAds = ref<Ad[]>([])
+
+watch(
+  ads,
+  () => {
+    const bannerAds = ads.value.filter((ad) => adPositions(ad.position).includes('banner'))
+    visibleAds.value = pickRandomAds(bannerAds, 3)
+  },
+  { immediate: true },
+)
 
 const containerClass = computed(() => {
   const count = visibleAds.value.length
