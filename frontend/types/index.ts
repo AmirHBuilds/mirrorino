@@ -19,6 +19,7 @@ export interface Repo {
   is_public: boolean
   verification_status: 'unverified' | 'pending' | 'verified' | 'rejected'
   download_count: number
+  clone_count: number
   file_count: number
   total_size: number
   owner: { id: number; username: string; role: string; created_at: string }
