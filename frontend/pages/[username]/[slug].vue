@@ -97,8 +97,8 @@
       </div>
 
       <div class="hidden sm:block mt-3">
-        <div class="inline-flex max-w-full items-center gap-2 rounded-md border border-border bg-surface-2/60 px-3 py-1.5 text-[11px] text-muted font-mono">
-          <Icon name="mdilocal:console" class="w-3.5 h-3.5 shrink-0" />
+        <div class="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted font-mono shadow-sm">
+          <Icon name="mdilocal:console" class="w-4 h-4 shrink-0 text-accent-2" />
           <span class="truncate">{{ cloneCurlCommand }}</span>
         </div>
       </div>
