@@ -93,6 +93,9 @@
             @edit="startEditFile"
           />
         </div>
+        <div class="px-4 py-2 border-t border-border text-xs text-muted font-mono break-all">
+          {{ cloneCurlCommand }}
+        </div>
       </div>
 
       <div class="card mt-4 p-4">
@@ -215,12 +218,12 @@ const displayStatus = computed(() => repo.value ? visibleVerificationStatus(repo
 
 const cloneArchiveUrl = computed(() => {
   if (!repo.value) return ''
-  return `${apiBase}/${encodeURIComponent(repo.value.owner.username)}/${encodeURIComponent(repo.value.slug)}/clone`
+  return `${apiBase}/api/${encodeURIComponent(repo.value.owner.username)}/${encodeURIComponent(repo.value.slug)}/clone`
 })
 
 const cloneCurlCommand = computed(() => {
   if (!repo.value) return ''
-  return `curl -L "${cloneArchiveUrl.value}" -o ${repo.value.slug}.zip`
+  return `clone: curl -L "${cloneArchiveUrl.value}" -o ${repo.value.slug}.zip`
 })
 
 const readmeFile = computed(() => tree.value?.files?.find((file) => file.original_name.toLowerCase() === 'readme.md' && !file.directory_path) ?? null)
