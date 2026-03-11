@@ -41,7 +41,12 @@ async def list_public_repos(
                 User.username.ilike(like),
             )
         )
-    order = Repo.download_count.desc() if sort == "downloads" else Repo.created_at.desc()
+    if sort == "downloads":
+        order = Repo.download_count.desc()
+    elif sort == "clones":
+        order = Repo.clone_count.desc()
+    else:
+        order = Repo.created_at.desc()
     result = await db.execute(query.offset((page - 1) * limit).limit(limit).order_by(order))
     return [await _enrich(r, db) for r in result.scalars().all()]
 
