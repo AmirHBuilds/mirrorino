@@ -93,6 +93,9 @@
             @edit="startEditFile"
           />
         </div>
+        <div class="px-4 py-2 border-t border-border text-xs text-muted font-mono break-all">
+          {{ cloneCurlCommand }}
+        </div>
       </div>
 
       <div v-if="isOwner" class="mt-4 card p-4 space-y-3">
@@ -204,6 +207,16 @@ const { data: tree, pending: treePending, refresh: refreshTree } = await useAsyn
 
 const isOwner = computed(() => isLoggedIn.value && !!repo.value && user.value?.id === repo.value.owner.id)
 const displayStatus = computed(() => repo.value ? visibleVerificationStatus(repo.value.verification_status, !!isOwner.value) : 'unverified')
+
+const cloneArchiveUrl = computed(() => {
+  if (!repo.value) return ''
+  return `${apiBase}/api/${encodeURIComponent(repo.value.owner.username)}/${encodeURIComponent(repo.value.slug)}/clone`
+})
+
+const cloneCurlCommand = computed(() => {
+  if (!repo.value) return ''
+  return `clone: curl -L "${cloneArchiveUrl.value}" -o ${repo.value.slug}.zip`
+})
 
 const readmeFile = computed(() => tree.value?.files?.find((file) => file.original_name.toLowerCase() === 'readme.md' && !file.directory_path) ?? null)
 
