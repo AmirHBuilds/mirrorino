@@ -95,6 +95,14 @@
         </div>
       </div>
 
+      <div class="card mt-4 p-4">
+        <p class="text-xs text-muted font-mono uppercase tracking-wider mb-2">Clone with curl</p>
+        <p class="text-xs text-muted mb-3">Download this repository as a zip archive:</p>
+        <div class="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs sm:text-sm font-mono break-all">
+          {{ cloneCurlCommand }}
+        </div>
+      </div>
+
       <div v-if="isOwner" class="mt-4 card p-4 space-y-3">
         <div class="rounded-md border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
           Uploading and folder creation happen inside: <span class="font-mono text-foreground">/{{ currentPath || '' }}</span>
@@ -204,6 +212,16 @@ const { data: tree, pending: treePending, refresh: refreshTree } = await useAsyn
 
 const isOwner = computed(() => isLoggedIn.value && !!repo.value && user.value?.id === repo.value.owner.id)
 const displayStatus = computed(() => repo.value ? visibleVerificationStatus(repo.value.verification_status, !!isOwner.value) : 'unverified')
+
+const cloneArchiveUrl = computed(() => {
+  if (!repo.value) return ''
+  return `${apiBase}/${encodeURIComponent(repo.value.owner.username)}/${encodeURIComponent(repo.value.slug)}/clone`
+})
+
+const cloneCurlCommand = computed(() => {
+  if (!repo.value) return ''
+  return `curl -L "${cloneArchiveUrl.value}" -o ${repo.value.slug}.zip`
+})
 
 const readmeFile = computed(() => tree.value?.files?.find((file) => file.original_name.toLowerCase() === 'readme.md' && !file.directory_path) ?? null)
 
