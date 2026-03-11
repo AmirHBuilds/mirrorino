@@ -52,7 +52,7 @@
           <span class="text-xs text-muted font-mono">{{ tree?.files?.length || 0 }} files · {{ tree?.directories?.length || 0 }} folders</span>
         </div>
         <div v-if="breadcrumbSegments.length" class="px-4 py-2 border-b border-border flex items-center gap-1.5 text-xs font-mono text-muted">
-          <button class="hover:underline" @click="navigateToPath('')">/</button>
+          <button class="hover:underline text-foreground" @click="navigateToPath('')">root</button>
           <span>/</span>
           <template v-for="(segment, index) in breadcrumbSegments" :key="`${segment}-${index}`">
             <button v-if="index < breadcrumbSegments.length - 1" class="hover:underline text-foreground" @click="navigateToPath(breadcrumbPaths[index])">{{ segment }}</button>
