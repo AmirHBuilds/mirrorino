@@ -5,6 +5,7 @@
       <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center">
         <select v-model="sort" class="input py-1.5 text-sm sm:w-48" @change="refresh">
           <option value="downloads">Most downloaded</option>
+          <option value="clones">Most cloned</option>
           <option value="recent">Recently updated</option>
         </select>
       </div>
@@ -30,7 +31,9 @@ import type { Repo } from '~/types'
 useSeoMeta({ title: 'Explore' })
 const route = useRoute()
 const router = useRouter()
-const sort = ref(((route.query.sort as string) || 'downloads') === 'recent' ? 'recent' : 'downloads')
+const allowedSorts = new Set(['downloads', 'clones', 'recent'])
+const querySort = (route.query.sort as string) || 'downloads'
+const sort = ref(allowedSorts.has(querySort) ? querySort : 'downloads')
 const { get } = useApi()
 const { data: repos, pending, refresh } = await useAsyncData(
   () => `explore:${sort.value}`,
@@ -39,8 +42,8 @@ const { data: repos, pending, refresh } = await useAsyncData(
 )
 watch(sort, () => {
   const query: Record<string, string> = { ...route.query } as Record<string, string>
-  if (sort.value === 'recent') query.sort = 'recent'
-  else delete query.sort
+  if (sort.value === 'downloads') delete query.sort
+  else query.sort = sort.value
   router.replace({ query })
 })
 </script>
