@@ -42,7 +42,33 @@ const props = withDefaults(
 
 const { ads, trackClick } = useAds()
 
-const items = computed(() => ads.value.filter((ad) => ad.position === props.position).slice(0, props.limit))
+function adPositions(position: string) {
+  return position
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function pickRandomAds(list: Ad[], limit: number) {
+  const shuffled = [...list]
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled.slice(0, limit)
+}
+
+const items = ref<Ad[]>([])
+
+watch(
+  [ads, () => props.position, () => props.limit],
+  () => {
+    const matchingAds = ads.value.filter((ad) => adPositions(ad.position).includes(props.position))
+    items.value = pickRandomAds(matchingAds, props.limit)
+  },
+  { immediate: true },
+)
+
 const containerClass = computed(() =>
   props.compact
     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
