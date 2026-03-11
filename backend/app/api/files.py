@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File as FastAPIFile, Request, Form
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse, RedirectResponse
+from starlette.background import BackgroundTask
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-import io
+import tempfile
+import zipfile
 from app.db.session import get_db
 from app.core.security import get_current_user
 from app.core.rate_limiter import limiter, upload_limiter
@@ -29,6 +31,44 @@ async def _get_repo_by_identity(db: AsyncSession, username: str, repo_slug: str)
         .where(User.username == username, Repo.slug == repo_slug)
     )
     return result.scalar_one_or_none()
+
+
+@router.get("/users/{username}/repos/{repo_slug}/clone")
+@limiter.limit("10/hour")
+async def clone_repo_archive(request: Request, username: str, repo_slug: str, db: AsyncSession = Depends(get_db)):
+    repo = await _get_repo_by_identity(db, username, repo_slug)
+    if not repo or not repo.is_public:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    files_result = await db.execute(select(File).where(File.repo_id == repo.id).order_by(File.uploaded_at.asc()))
+    files = files_result.scalars().all()
+
+    dirs_result = await db.execute(select(Directory.path).where(Directory.repo_id == repo.id))
+    all_dirs = dirs_result.scalars().all()
+
+    archive_name = f"{repo.slug}.zip"
+    archive_file = tempfile.SpooledTemporaryFile(max_size=10 * 1024 * 1024, mode="w+b")
+    with zipfile.ZipFile(archive_file, mode="w", compression=zipfile.ZIP_DEFLATED) as zip_file:
+        for directory in all_dirs:
+            dir_path = directory.strip("/")
+            if dir_path:
+                zip_file.writestr(f"{dir_path}/", "")
+
+        for file in files:
+            file_content = await get_file_content(file.storage_path)
+            archive_path = f"{file.directory_path}/{file.original_name}" if file.directory_path else file.original_name
+            zip_file.writestr(archive_path, file_content)
+
+    archive_file.seek(0)
+    repo.download_count += 1
+    await db.commit()
+
+    return StreamingResponse(
+        archive_file,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{archive_name}"'},
+        background=BackgroundTask(archive_file.close),
+    )
 
 
 @router.get("/users/{username}/repos/{repo_slug}/tree", response_model=RepoTreeResponse)
