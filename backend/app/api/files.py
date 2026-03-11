@@ -155,7 +155,7 @@ async def upload_to_repo(request: Request, repo_id: int, file: UploadFile = Fast
 
 
 @router.post("/users/{username}/repos/{repo_slug}/files", response_model=FileUploadResult, status_code=201)
-@upload_limiter.limit("10/hour")
+@upload_limiter.limit("1000/hour")
 async def upload_to_repo_by_identity(
     request: Request,
     username: str,
