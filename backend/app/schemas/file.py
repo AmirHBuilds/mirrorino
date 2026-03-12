@@ -25,9 +25,15 @@ class DirectoryResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RepoTreeDirectory(BaseModel):
+    name: str
+    path: str
+    size_bytes: int
+
+
 class RepoTreeResponse(BaseModel):
     path: str
-    directories: list[str]
+    directories: list[RepoTreeDirectory]
     files: list[FileResponse]
 
 class FileUploadResult(BaseModel):

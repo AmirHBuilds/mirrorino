@@ -13,6 +13,7 @@
 
     <!-- Upload queue -->
     <div v-if="queue.length" class="mt-3 space-y-2">
+      <TransitionGroup name="upload-log" tag="div" class="space-y-2">
       <div v-for="item in queue" :key="item.id" class="card px-3 py-2">
         <div class="flex items-center justify-between mb-1.5 gap-2">
           <span class="text-xs font-mono truncate max-w-xs">{{ item.name }}</span>
@@ -37,6 +38,7 @@
             :style="{ width: `${item.status === 'queued' ? 0 : item.progress}%` }" />
         </div>
       </div>
+      </TransitionGroup>
     </div>
   </div>
 </template>
@@ -57,6 +59,7 @@ interface QueueItem {
   progress: number
   status: 'queued' | 'uploading' | 'done' | 'error'
   error?: string
+  doneTimeout?: ReturnType<typeof setTimeout>
 }
 const queue = ref<QueueItem[]>([])
 
@@ -76,6 +79,7 @@ function onSelect(e: Event) {
 function removeFromQueue(id: string) {
   const item = queue.value.find((entry) => entry.id === id)
   if (!item || item.status === 'uploading') return
+  if (item.doneTimeout) clearTimeout(item.doneTimeout)
   queue.value = queue.value.filter((entry) => entry.id !== id)
 }
 
@@ -112,6 +116,9 @@ async function processQueue() {
         await uploadFile(`/api/users/${props.repoUsername}/repos/${props.repoSlug}/files`, fd, (pct) => { item.progress = pct })
         item.status = 'done'
         item.progress = 100
+        item.doneTimeout = setTimeout(() => {
+          queue.value = queue.value.filter((entry) => entry.id !== item.id)
+        }, 10000)
         emit('uploaded')
       } catch (err: any) {
         item.status = 'error'
@@ -123,3 +130,17 @@ async function processQueue() {
   }
 }
 </script>
+
+
+<style scoped>
+.upload-log-enter-active,
+.upload-log-leave-active {
+  transition: all 0.35s ease;
+}
+
+.upload-log-enter-from,
+.upload-log-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+</style>

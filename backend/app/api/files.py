@@ -14,8 +14,8 @@ from app.models.repo import Repo
 from app.models.file import File
 from app.models.directory import Directory
 from app.models.user import User
-from app.schemas.file import FileResponse, FileUploadResult, RepoTreeResponse, DirectoryCreate, DirectoryResponse
-from app.services.file_service import upload_file, delete_file_record, normalize_directory_path, ensure_directory_exists
+from app.schemas.file import FileResponse, FileUploadResult, RepoTreeResponse, DirectoryCreate, DirectoryResponse, RepoTreeDirectory
+from app.services.file_service import upload_file, delete_file_record, normalize_directory_path, ensure_directory_exists, delete_directory_record
 
 router = APIRouter(tags=["Files"])
 
@@ -82,24 +82,58 @@ async def list_repo_tree(username: str, repo_slug: str, path: str = "", db: Asyn
     files_result = await db.execute(select(File).where(File.repo_id == repo.id, File.directory_path == normalized).order_by(File.uploaded_at.desc()))
     files = files_result.scalars().all()
 
+    all_files_result = await db.execute(select(File.directory_path, File.size_bytes).where(File.repo_id == repo.id))
+    file_rows = all_files_result.all()
+
     dirs_result = await db.execute(select(Directory.path).where(Directory.repo_id == repo.id))
     all_dirs = dirs_result.scalars().all()
     prefix = f"{normalized}/" if normalized else ""
-    children: set[str] = set()
+
+    child_paths: set[str] = set()
     for directory in all_dirs:
         if prefix and not directory.startswith(prefix):
             continue
         if not prefix and "/" in directory:
-            children.add(directory.split("/", 1)[0])
+            child_paths.add(directory.split("/", 1)[0])
             continue
         remainder = directory[len(prefix):] if prefix else directory
         if not remainder:
             continue
         child = remainder.split("/", 1)[0]
         if child:
-            children.add(child)
+            child_paths.add(f"{prefix}{child}" if prefix else child)
 
-    return RepoTreeResponse(path=normalized, directories=sorted(children), files=files)
+    for directory_path, _ in file_rows:
+        if not directory_path:
+            continue
+        if prefix:
+            if not directory_path.startswith(prefix):
+                continue
+            remainder = directory_path[len(prefix):]
+            if not remainder:
+                continue
+            child = remainder.split("/", 1)[0]
+            child_paths.add(f"{prefix}{child}")
+        else:
+            child_paths.add(directory_path.split("/", 1)[0])
+
+    directory_sizes: dict[str, int] = {path: 0 for path in child_paths}
+    for directory_path, size_bytes in file_rows:
+        if not directory_path:
+            continue
+        for child_path in child_paths:
+            if directory_path == child_path or directory_path.startswith(f"{child_path}/"):
+                directory_sizes[child_path] += size_bytes
+
+    directories = sorted(
+        [
+            RepoTreeDirectory(name=path.split("/")[-1], path=path, size_bytes=directory_sizes[path])
+            for path in child_paths
+        ],
+        key=lambda entry: entry.name.lower(),
+    )
+
+    return RepoTreeResponse(path=normalized, directories=directories, files=files)
 
 
 @router.post("/users/{username}/repos/{repo_slug}/directories", response_model=DirectoryResponse, status_code=201)
@@ -221,6 +255,26 @@ async def delete_file_endpoint(file_id: int, db: AsyncSession = Depends(get_db),
     freed = file.size_bytes
     await delete_file_record(file, current_user, db)
     return {"message": "File deleted", "storage_freed_bytes": freed, "storage_remaining": current_user.storage_remaining}
+
+
+@router.delete("/users/{username}/repos/{repo_slug}/directories")
+async def delete_repo_directory(
+    username: str,
+    repo_slug: str,
+    path: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repo = await _get_repo_by_identity(db, username, repo_slug)
+    if not repo or repo.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Repository not found or access denied")
+
+    normalized = normalize_directory_path(path)
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Directory path is required")
+
+    freed = await delete_directory_record(repo.id, normalized, current_user, db)
+    return {"message": "Directory deleted", "storage_freed_bytes": freed, "storage_remaining": current_user.storage_remaining}
 
 
 @router.put("/files/{file_id}/content")

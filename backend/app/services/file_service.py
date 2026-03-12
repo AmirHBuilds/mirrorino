@@ -49,3 +49,37 @@ async def delete_file_record(file: File, owner: User, db: AsyncSession) -> None:
     owner.storage_used = max(0, owner.storage_used - file.size_bytes)
     await db.delete(file)
     await db.flush()
+
+
+async def delete_directory_record(repo_id: int, directory_path: str, owner: User, db: AsyncSession) -> int:
+    normalized = normalize_directory_path(directory_path)
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Directory path is required")
+
+    file_result = await db.execute(
+        select(File).where(
+            File.repo_id == repo_id,
+            (File.directory_path == normalized) | (File.directory_path.startswith(f"{normalized}/")),
+        )
+    )
+    files = file_result.scalars().all()
+
+    freed_bytes = 0
+    for file in files:
+        await delete_file(file.storage_path)
+        freed_bytes += file.size_bytes
+        await db.delete(file)
+
+    dir_result = await db.execute(
+        select(Directory).where(
+            Directory.repo_id == repo_id,
+            (Directory.path == normalized) | (Directory.path.startswith(f"{normalized}/")),
+        )
+    )
+    directories = dir_result.scalars().all()
+    for directory in directories:
+        await db.delete(directory)
+
+    owner.storage_used = max(0, owner.storage_used - freed_bytes)
+    await db.flush()
+    return freed_bytes
