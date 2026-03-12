@@ -38,6 +38,9 @@
           </div>
           <div v-if="isOwner" class="flex items-center gap-1 shrink-0">
             <button @click.stop="goToUpload(repo)" class="btn-ghost py-1 px-2 text-xs">Upload</button>
+            <button @click.stop="openEdit(repo)" class="btn-ghost py-1 px-2 text-xs">
+              <Icon name="mdilocal:pencil-outline" class="w-3.5 h-3.5" /> Edit
+            </button>
           </div>
         </div>
       </div>
@@ -70,6 +73,58 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showEdit" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4" @click.self="showEdit=false">
+      <div class="card p-0 w-full max-w-lg overflow-hidden border border-border/80 shadow-2xl shadow-black/30">
+        <div class="px-6 py-4 border-b border-border/80 bg-surface-2/40">
+          <div class="flex items-center gap-2 text-sm font-medium">
+            <Icon name="mdilocal:pencil-outline" class="w-4 h-4 text-accent-2" />
+            Edit repository
+          </div>
+          <p class="text-xs text-muted mt-1">Current values are loaded below — update any field and save.</p>
+        </div>
+
+        <div class="p-6 space-y-4">
+          <div class="rounded-lg border border-border bg-surface-2/30 p-3">
+            <p class="text-[11px] uppercase tracking-wider text-muted mb-1">Current repository</p>
+            <p class="text-sm font-medium truncate">{{ originalRepo.name || '—' }}</p>
+            <p class="text-xs text-muted truncate mt-0.5">{{ originalRepo.description || 'No description' }}</p>
+          </div>
+
+          <div>
+            <label class="text-xs text-muted block mb-1.5">Repository name</label>
+            <div class="relative">
+              <Icon name="mdilocal:source-repository" class="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+              <input v-model="editRepo.name" class="input pl-9" placeholder="my-cool-tool" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-muted block mb-1.5">Description (optional)</label>
+            <div class="relative">
+              <Icon name="mdilocal:file-document-outline" class="w-4 h-4 text-muted absolute left-3 top-3" />
+              <textarea
+                v-model="editRepo.description"
+                class="input pl-9 min-h-[100px] resize-y"
+                placeholder="What is this repo for?"
+              />
+            </div>
+            <p class="text-[11px] text-muted mt-1">Leave empty to remove description.</p>
+          </div>
+
+          <p v-if="editError" class="text-xs text-danger bg-danger/10 border border-danger/30 rounded px-3 py-2">{{ editError }}</p>
+
+          <div class="flex gap-2 pt-1">
+            <button @click="showEdit=false" class="btn-secondary flex-1 justify-center">Cancel</button>
+            <button @click="saveRepoEdits" class="btn-primary flex-1 justify-center" :disabled="editing || !hasEditChanges">
+              <Icon v-if="editing" name="mdilocal:loading" class="w-4 h-4 animate-spin" />
+              Save changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -79,7 +134,7 @@ import type { Repo } from '~/types'
 import { visibleVerificationStatus, type VerificationStatus } from '~/utils/repo'
 
 const route = useRoute()
-const { get, post } = useApi()
+const { get, post, put } = useApi()
 const { user, fetchUser } = useAuth()
 const username = computed(() => String(route.params.username || ''))
 
@@ -120,6 +175,47 @@ async function createRepo() {
 function goToUpload(repo: Repo) {
   navigateTo(`/user/repos/${repo.owner.username}/${repo.slug}/upload`)
 }
+
+
+const showEdit = ref(false)
+const editing = ref(false)
+const editError = ref('')
+const editRepoId = ref<number | null>(null)
+const editRepo = reactive({ name: '', description: '' })
+const originalRepo = reactive({ name: '', description: '' })
+
+const hasEditChanges = computed(() => (
+  editRepo.name !== originalRepo.name || editRepo.description !== originalRepo.description
+))
+
+function openEdit(repo: Repo) {
+  editRepoId.value = repo.id
+  editRepo.name = repo.name
+  editRepo.description = repo.description || ''
+  originalRepo.name = repo.name
+  originalRepo.description = repo.description || ''
+  editError.value = ''
+  showEdit.value = true
+}
+
+async function saveRepoEdits() {
+  if (!editRepoId.value) return
+  editing.value = true
+  editError.value = ''
+  try {
+    await put(`/api/repos/${editRepoId.value}`, {
+      name: editRepo.name,
+      description: editRepo.description || null,
+    })
+    showEdit.value = false
+    await refresh()
+  } catch (e: any) {
+    editError.value = e.message
+  } finally {
+    editing.value = false
+  }
+}
+
 
 useSeoMeta({ title: computed(() => `${username.value} repos`) })
 </script>
