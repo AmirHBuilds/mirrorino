@@ -44,3 +44,14 @@ async def delete_repo_and_free_storage(repo: Repo, owner: User, db: AsyncSession
     if repo.verification_status == VerificationStatus.VERIFIED:
         remove_verification_bonus(owner)
     return total_freed
+
+
+async def rename_repo(repo: Repo, new_name: str, db: AsyncSession) -> None:
+    slug = _slugify(new_name)
+    result = await db.execute(
+        select(Repo).where(Repo.owner_id == repo.owner_id, Repo.slug == slug, Repo.id != repo.id)
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="You already have a repo with this name")
+    repo.name = new_name
+    repo.slug = slug
