@@ -302,10 +302,10 @@ function escapeHtml(content: string) {
 
 function resolveReadmeAssetUrl(url: string) {
   if (!url || !repo.value) return url
-  if (url.startsWith('#') || url.startsWith('//') || url.startsWith('/') || url.startsWith('data:')) return url
+  if (url.startsWith('#') || url.startsWith('//') || url.startsWith('data:')) return url
   if (/^(https?:|mailto:|tel:)/i.test(url)) return url
 
-  const normalized = url.replace(/^\.\//, '')
+  const normalized = url.startsWith('/') ? url.slice(1) : url.replace(/^\.\//, '')
   if (!normalized || normalized.startsWith('../')) return url
 
   const encodedPath = normalized.split('/').map((segment) => encodeURIComponent(segment)).join('/')
@@ -313,8 +313,7 @@ function resolveReadmeAssetUrl(url: string) {
 }
 
 function markdownToHtml(content: string) {
-  const escaped = escapeHtml(content)
-  const lines = escaped.replace(/\r\n/g, '\n').split('\n')
+  const lines = content.replace(/\r\n/g, '\n').split('\n')
   const html: string[] = []
   let inCode = false
   let listType: 'ul' | 'ol' | null = null
@@ -326,7 +325,13 @@ function markdownToHtml(content: string) {
     }
   }
 
-  const inline = (line: string) => line
+  const inline = (line: string) => escapeHtml(line)
+    .replace(/\[!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]+)")?\)\]\(([^)\s]+)\)/g, (_m, alt, src, title, href) => {
+      const titleAttr = title ? ` title="${title}"` : ''
+      const resolvedHref = resolveReadmeAssetUrl(href)
+      const externalAttrs = /^https?:\/\//i.test(resolvedHref) ? ' target="_blank" rel="noopener noreferrer"' : ''
+      return `<a href="${resolvedHref}"${externalAttrs}><img src="${resolveReadmeAssetUrl(src)}" alt="${alt}"${titleAttr} loading="lazy" decoding="async"></a>`
+    })
     .replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]+)")?\)/g, (_m, alt, src, title) => {
       const titleAttr = title ? ` title="${title}"` : ''
       return `<img src="${resolveReadmeAssetUrl(src)}" alt="${alt}"${titleAttr} loading="lazy" decoding="async">`
@@ -341,7 +346,9 @@ function markdownToHtml(content: string) {
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
 
   for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index].trimEnd()
+    const rawLine = lines[index]
+    const line = rawLine.trimEnd()
+    const trimmed = line.trim()
 
     if (line.startsWith('```')) {
       closeList()
@@ -351,12 +358,46 @@ function markdownToHtml(content: string) {
     }
 
     if (inCode) {
-      html.push(`${line}\n`)
+      html.push(`${escapeHtml(rawLine)}\n`)
       continue
     }
 
-    if (!line.trim()) {
+    if (trimmed.startsWith('<')) {
       closeList()
+      html.push(rawLine)
+      continue
+    }
+
+    if (!trimmed) {
+      closeList()
+      continue
+    }
+
+    if (line.includes('|') && index + 1 < lines.length && /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/.test(lines[index + 1])) {
+      closeList()
+      const headerCells = line.split('|').map((cell) => cell.trim()).filter(Boolean)
+      const alignRow = lines[index + 1].split('|').map((cell) => cell.trim()).filter(Boolean)
+      html.push('<table><thead><tr>')
+      headerCells.forEach((cell, cellIndex) => {
+        const align = alignRow[cellIndex] || ''
+        const style = align.startsWith(':') && align.endsWith(':') ? ' style="text-align:center"' : align.endsWith(':') ? ' style="text-align:right"' : ''
+        html.push(`<th${style}>${inline(cell)}</th>`)
+      })
+      html.push('</tr></thead><tbody>')
+      index += 2
+      while (index < lines.length && lines[index].includes('|') && lines[index].trim()) {
+        const rowCells = lines[index].split('|').map((cell) => cell.trim()).filter(Boolean)
+        html.push('<tr>')
+        rowCells.forEach((cell, cellIndex) => {
+          const align = alignRow[cellIndex] || ''
+          const style = align.startsWith(':') && align.endsWith(':') ? ' style="text-align:center"' : align.endsWith(':') ? ' style="text-align:right"' : ''
+          html.push(`<td${style}>${inline(cell)}</td>`)
+        })
+        html.push('</tr>')
+        index += 1
+      }
+      html.push('</tbody></table>')
+      index -= 1
       continue
     }
 
@@ -417,7 +458,19 @@ function markdownToHtml(content: string) {
     }
 
     closeList()
-    html.push(`<p>${inline(line)}</p>`)
+
+    const paragraphLines = [line]
+    while (index + 1 < lines.length) {
+      const nextLine = lines[index + 1].trimEnd()
+      const nextTrimmed = nextLine.trim()
+      if (!nextTrimmed) break
+      if (nextLine.startsWith('```') || nextLine.startsWith('#') || nextLine.startsWith('> ') || /^[-*]\s+/.test(nextLine) || /^\d+\.\s+/.test(nextLine) || /^-{3,}$/.test(nextLine) || /^\*{3,}$/.test(nextLine) || nextTrimmed.startsWith('<')) break
+      if (nextLine.includes('|') && index + 2 < lines.length && /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/.test(lines[index + 2])) break
+      paragraphLines.push(nextLine)
+      index += 1
+    }
+
+    html.push(`<p>${inline(paragraphLines.join(' '))}</p>`)
   }
 
   closeList()
