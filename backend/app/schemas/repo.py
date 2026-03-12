@@ -21,6 +21,15 @@ class RepoUpdate(BaseModel):
     description: str | None = None
     is_public: bool | None = None
 
+    @field_validator("name")
+    @classmethod
+    def name_valid(cls, v: str | None):
+        if v is None:
+            return v
+        if not re.match(r"^[a-zA-Z0-9_\-\.]{1,100}$", v):
+            raise ValueError("Repo name must be 1-100 chars, letters/numbers/-_. only")
+        return v
+
 class RepoResponse(BaseModel):
     id: int
     name: str

@@ -70,6 +70,8 @@
         </div>
       </div>
     </div>
+
+
   </div>
 </template>
 
@@ -120,6 +122,11 @@ async function createRepo() {
 function goToUpload(repo: Repo) {
   navigateTo(`/user/repos/${repo.owner.username}/${repo.slug}/upload`)
 }
+
+
+
+
+
 
 useSeoMeta({ title: computed(() => `${username.value} repos`) })
 </script>

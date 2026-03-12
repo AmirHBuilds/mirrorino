@@ -8,7 +8,7 @@ from app.models.repo import Repo, VerificationStatus
 from app.models.file import File
 from app.models.user import User
 from app.schemas.repo import RepoCreate, RepoUpdate, RepoResponse, RepoVerifyRequest
-from app.services.repo_service import create_repo, delete_repo_and_free_storage
+from app.services.repo_service import create_repo, delete_repo_and_free_storage, rename_repo
 
 router = APIRouter(prefix="/repos", tags=["Repositories"])
 
@@ -106,8 +106,10 @@ async def update_repo(repo_id: int, data: RepoUpdate, db: AsyncSession = Depends
     repo = result.scalar_one_or_none()
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found or access denied")
-    if data.name is not None: repo.name = data.name
-    if data.description is not None: repo.description = data.description
+    if "name" in data.model_fields_set and data.name is not None and data.name != repo.name:
+        await rename_repo(repo, data.name, db)
+    if "description" in data.model_fields_set:
+        repo.description = data.description
     if data.is_public is not None and data.is_public is False:
         raise HTTPException(status_code=400, detail="Private repositories are only available via support")
     if data.is_public is not None: repo.is_public = True
