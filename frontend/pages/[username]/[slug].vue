@@ -282,6 +282,18 @@ function escapeHtml(content: string) {
     .replace(/'/g, '&#39;')
 }
 
+function resolveReadmeAssetUrl(url: string) {
+  if (!url || !repo.value) return url
+  if (url.startsWith('#') || url.startsWith('//') || url.startsWith('/') || url.startsWith('data:')) return url
+  if (/^(https?:|mailto:|tel:)/i.test(url)) return url
+
+  const normalized = url.replace(/^\.\//, '')
+  if (!normalized || normalized.startsWith('../')) return url
+
+  const encodedPath = normalized.split('/').map((segment) => encodeURIComponent(segment)).join('/')
+  return `${apiBase}/raw/${repo.value.owner.username}/${repo.value.slug}/${encodedPath}`
+}
+
 function markdownToHtml(content: string) {
   const escaped = escapeHtml(content)
   const lines = escaped.replace(/\r\n/g, '\n').split('\n')
@@ -297,13 +309,21 @@ function markdownToHtml(content: string) {
   }
 
   const inline = (line: string) => line
+    .replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]+)")?\)/g, (_m, alt, src, title) => {
+      const titleAttr = title ? ` title="${title}"` : ''
+      return `<img src="${resolveReadmeAssetUrl(src)}" alt="${alt}"${titleAttr} loading="lazy" decoding="async">`
+    })
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, text, href) => {
+      const resolvedHref = resolveReadmeAssetUrl(href)
+      const externalAttrs = /^https?:\/\//i.test(resolvedHref) ? ' target="_blank" rel="noopener noreferrer"' : ''
+      return `<a href="${resolvedHref}"${externalAttrs}>${text}</a>`
+    })
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
 
-  for (const rawLine of lines) {
-    const line = rawLine.trimEnd()
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trimEnd()
 
     if (line.startsWith('```')) {
       closeList()
@@ -319,6 +339,34 @@ function markdownToHtml(content: string) {
 
     if (!line.trim()) {
       closeList()
+      continue
+    }
+
+    if (line.includes('|') && index + 1 < lines.length && /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/.test(lines[index + 1])) {
+      closeList()
+      const headerCells = line.split('|').map((cell) => cell.trim()).filter(Boolean)
+      const alignRow = lines[index + 1].split('|').map((cell) => cell.trim()).filter(Boolean)
+      html.push('<table><thead><tr>')
+      headerCells.forEach((cell, cellIndex) => {
+        const align = alignRow[cellIndex] || ''
+        const style = align.startsWith(':') && align.endsWith(':') ? ' style="text-align:center"' : align.endsWith(':') ? ' style="text-align:right"' : ''
+        html.push(`<th${style}>${inline(cell)}</th>`)
+      })
+      html.push('</tr></thead><tbody>')
+      index += 2
+      while (index < lines.length && lines[index].includes('|') && lines[index].trim()) {
+        const rowCells = lines[index].split('|').map((cell) => cell.trim()).filter(Boolean)
+        html.push('<tr>')
+        rowCells.forEach((cell, cellIndex) => {
+          const align = alignRow[cellIndex] || ''
+          const style = align.startsWith(':') && align.endsWith(':') ? ' style="text-align:center"' : align.endsWith(':') ? ' style="text-align:right"' : ''
+          html.push(`<td${style}>${inline(cell)}</td>`)
+        })
+        html.push('</tr>')
+        index += 1
+      }
+      html.push('</tbody></table>')
+      index -= 1
       continue
     }
 

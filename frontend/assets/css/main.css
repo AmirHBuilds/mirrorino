@@ -104,18 +104,29 @@
 }
 
 @layer components {
-  .markdown-body { @apply text-sm text-fg leading-7; }
-  .markdown-body h1 { @apply text-2xl font-semibold mt-4 mb-3; }
-  .markdown-body h2 { @apply text-xl font-semibold mt-4 mb-2; }
-  .markdown-body h3 { @apply text-lg font-semibold mt-3 mb-2; }
-  .markdown-body p { @apply mb-3; }
-  .markdown-body ul { @apply list-disc pl-6 mb-3; }
-  .markdown-body ol { @apply list-decimal pl-6 mb-3; }
+  .markdown-body { @apply text-sm text-fg leading-7 break-words; }
+  .markdown-body > *:first-child { @apply mt-0; }
+  .markdown-body > *:last-child { @apply mb-0; }
+  .markdown-body h1 { @apply text-3xl font-semibold mt-6 mb-4 pb-2 border-b border-border; }
+  .markdown-body h2 { @apply text-2xl font-semibold mt-6 mb-3 pb-1 border-b border-border; }
+  .markdown-body h3 { @apply text-xl font-semibold mt-5 mb-2; }
+  .markdown-body h4 { @apply text-lg font-semibold mt-4 mb-2; }
+  .markdown-body h5 { @apply text-base font-semibold mt-4 mb-2; }
+  .markdown-body h6 { @apply text-sm font-semibold mt-4 mb-2 text-muted; }
+  .markdown-body p { @apply mb-4; }
+  .markdown-body ul { @apply list-disc pl-6 mb-4; }
+  .markdown-body ol { @apply list-decimal pl-6 mb-4; }
+  .markdown-body li > p { @apply mb-2; }
+  .markdown-body table { @apply block w-full overflow-x-auto border-collapse mb-4; }
+  .markdown-body table th { @apply font-semibold border border-border bg-surface-2 px-3 py-2 text-left; }
+  .markdown-body table td { @apply border border-border px-3 py-2; }
   .markdown-body code { @apply font-mono bg-surface-2 px-1 py-0.5 rounded text-xs; }
-  .markdown-body pre { @apply bg-surface-2 rounded p-3 overflow-x-auto mb-3; }
-  .markdown-body pre code { @apply bg-transparent p-0 text-xs; }
-  .markdown-body a { @apply text-accent-2 underline; }
-  .markdown-body blockquote { @apply border-l-2 border-border pl-3 text-muted mb-3; }
-  .markdown-body hr { @apply border-border my-4; }
-  .markdown-body li { @apply mb-1; }
+  .markdown-body pre { @apply bg-surface-2 rounded-md p-4 overflow-x-auto mb-4 border border-border; }
+  .markdown-body pre code { @apply bg-transparent p-0 text-xs leading-6; }
+  .markdown-body a { @apply text-accent-2 underline underline-offset-2; }
+  .markdown-body blockquote { @apply border-l-4 border-border pl-4 text-muted mb-4; }
+  .markdown-body hr { @apply border-border my-6; }
+  .markdown-body img { @apply max-w-full h-auto rounded-md border border-border my-4; }
+  .markdown-body :where(p, li, blockquote, h1, h2, h3, h4, h5, h6) { unicode-bidi: plaintext; }
 }
+
