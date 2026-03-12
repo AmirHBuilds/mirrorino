@@ -7,7 +7,7 @@
       <Icon name="mdilocal:cloud-upload-outline" class="w-10 h-10 text-muted mx-auto mb-3" />
       <p class="text-sm text-fg mb-1">Drop files here or <span class="text-accent-2">browse</span></p>
       <button type="button" @click.stop="inputRef?.click()" class="btn-secondary text-xs mt-3">Select files</button>
-      <p class="text-xs text-muted">Max 500MB per file · Executables blocked</p>
+      <p class="text-xs text-muted">Max 500MB per file · Some unsafe binaries are blocked</p>
       <input ref="inputRef" type="file" multiple class="hidden" @change="onSelect" />
     </div>
 

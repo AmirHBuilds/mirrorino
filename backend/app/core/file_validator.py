@@ -3,8 +3,7 @@ from fastapi import HTTPException, UploadFile
 
 BLOCKED_MIME_TYPES = {
     "application/x-dosexec", "application/x-msdownload",
-    "application/x-executable", "application/x-sharedlib",
-    "application/x-object", "application/x-pie-executable",
+    "application/x-sharedlib", "application/x-object",
 }
 MAX_FILE_SIZE = 500 * 1024 * 1024
 
