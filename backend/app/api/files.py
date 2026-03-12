@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse, RedirectResponse
 from starlette.background import BackgroundTask
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import io
 import tempfile
 import zipfile
 from app.db.session import get_db
