@@ -33,6 +33,9 @@
           <button v-if="repo.verification_status === 'unverified'" @click="requestVerify" class="btn-secondary text-sm py-1.5">
             <Icon name="mdilocal:shield-check-outline" class="w-4 h-4" /> Request Verification
           </button>
+          <button @click="openRepoDetailsEdit" class="btn-secondary text-sm py-1.5">
+            <Icon name="mdilocal:pencil-outline" class="w-4 h-4" /> Edit details
+          </button>
           <NuxtLink :to="`/user/repos/${repo.owner.username}/${repo.slug}/upload`" class="btn-primary text-sm py-1.5">
             <Icon name="mdilocal:upload" class="w-4 h-4" /> Upload files
           </NuxtLink>
@@ -153,6 +156,43 @@
         </div>
       </div>
 
+
+      <div v-if="showRepoEditModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" @click.self="closeRepoDetailsEdit">
+        <div class="card p-0 w-full max-w-lg overflow-hidden border border-border/80 shadow-2xl shadow-black/30">
+          <div class="px-6 py-4 border-b border-border/80 bg-surface-2/40">
+            <div class="flex items-center gap-2 text-sm font-medium">
+              <Icon name="mdilocal:pencil-outline" class="w-4 h-4 text-accent-2" />
+              Edit repository details
+            </div>
+            <p class="text-xs text-muted mt-1">Current values are prefilled. Update name and description, then save.</p>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <label class="text-xs text-muted block mb-1.5">Repository name</label>
+              <div class="relative">
+                <Icon name="mdilocal:source-repository" class="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input v-model="repoEditForm.name" class="input pl-9" placeholder="my-cool-tool" />
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-muted block mb-1.5">Description (optional)</label>
+              <div class="relative">
+                <Icon name="mdilocal:file-document-outline" class="w-4 h-4 text-muted absolute left-3 top-3" />
+                <textarea v-model="repoEditForm.description" class="input pl-9 min-h-[100px] resize-y" placeholder="What is this repo for?" />
+              </div>
+            </div>
+            <p v-if="repoEditError" class="text-xs text-danger bg-danger/10 border border-danger/30 rounded px-3 py-2">{{ repoEditError }}</p>
+            <div class="flex justify-end gap-2">
+              <button class="btn-secondary text-sm py-1.5" @click="closeRepoDetailsEdit" :disabled="savingRepoDetails">Cancel</button>
+              <button class="btn-primary text-sm py-1.5" @click="saveRepoDetailsEdit" :disabled="savingRepoDetails || !hasRepoDetailsChanges">
+                <Icon v-if="savingRepoDetails" name="mdilocal:loading" class="w-4 h-4 animate-spin" />
+                Save changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div v-if="showDeleteRepoModal" class="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-4" @click.self="closeDeleteRepoModal">
         <div class="card w-full max-w-md p-5">
           <div class="flex items-start gap-3 mb-3">
@@ -208,6 +248,11 @@ const showDeleteRepoModal = ref(false)
 const deleteRepoConfirmText = ref('')
 const deletingRepo = ref(false)
 const deleteRepoError = ref('')
+const showRepoEditModal = ref(false)
+const savingRepoDetails = ref(false)
+const repoEditError = ref('')
+const repoEditForm = reactive({ name: '', description: '' })
+const repoOriginalDetails = reactive({ name: '', description: '' })
 
 const { data: repo, pending, refresh: refreshRepo } = await useAsyncData(
   () => `repo-detail:${route.params.username}:${route.params.slug}`,
@@ -561,6 +606,51 @@ async function createDirectory() {
   await post(`/api/users/${repo.value.owner.username}/repos/${repo.value.slug}/directories`, { path: target })
   newDirectory.value = ''
   await refreshTree()
+}
+
+
+const hasRepoDetailsChanges = computed(() => (
+  repoEditForm.name !== repoOriginalDetails.name || repoEditForm.description !== repoOriginalDetails.description
+))
+
+function openRepoDetailsEdit() {
+  if (!repo.value) return
+  repoEditForm.name = repo.value.name
+  repoEditForm.description = repo.value.description || ''
+  repoOriginalDetails.name = repo.value.name
+  repoOriginalDetails.description = repo.value.description || ''
+  repoEditError.value = ''
+  showRepoEditModal.value = true
+}
+
+function closeRepoDetailsEdit() {
+  if (savingRepoDetails.value) return
+  showRepoEditModal.value = false
+  repoEditError.value = ''
+}
+
+async function saveRepoDetailsEdit() {
+  if (!repo.value || !hasRepoDetailsChanges.value) return
+  savingRepoDetails.value = true
+  repoEditError.value = ''
+  try {
+    const updated = await put<Repo>(`/api/repos/${repo.value.id}`, {
+      name: repoEditForm.name,
+      description: repoEditForm.description || null,
+    })
+    showRepoEditModal.value = false
+    repo.value = updated
+    const expectedPath = `/${updated.owner.username}/${updated.slug}`
+    if (route.path !== expectedPath) {
+      await navigateTo(expectedPath)
+      return
+    }
+    await Promise.all([refreshRepo(), refreshTree()])
+  } catch (error: any) {
+    repoEditError.value = error?.message || 'Failed to update repository details.'
+  } finally {
+    savingRepoDetails.value = false
+  }
 }
 
 function openDeleteRepoModal() {
