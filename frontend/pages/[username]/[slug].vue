@@ -18,7 +18,7 @@
       <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <div class="flex flex-wrap items-center gap-2 text-sm mb-2">
-            <Icon name="mdilocal:source-repository" class="w-4 h-4 text-muted" />
+            <Icon name="mdilocal:repo-clone" class="w-4 h-4 text-muted" />
             <NuxtLink :to="`/${repo.owner.username}/repos`" class="text-muted hover:underline">{{ repo.owner.username }}</NuxtLink>
             <span class="text-muted">/</span>
             <span class="font-semibold">{{ repo.name }}</span>
@@ -42,7 +42,7 @@
       <div class="flex flex-wrap gap-5 text-xs text-muted font-mono mb-6 border-b border-border pb-4">
         <span class="flex items-center gap-1.5"><Icon name="mdilocal:file-multiple-outline" class="w-4 h-4" />{{ repo.file_count }} files</span>
         <span class="flex items-center gap-1.5"><Icon name="mdilocal:download-outline" class="w-4 h-4" />{{ repo.download_count.toLocaleString() }}</span>
-        <span class="flex items-center gap-1.5"><Icon name="mdilocal:source-repository" class="w-4 h-4" />{{ repo.clone_count.toLocaleString() }} clones</span>
+        <span class="flex items-center gap-1.5"><Icon name="mdilocal:repo-clone" class="w-4 h-4" />{{ repo.clone_count.toLocaleString() }} clones</span>
         <span class="flex items-center gap-1.5"><Icon name="mdilocal:database-outline" class="w-4 h-4" />{{ formatBytes(repo.total_size) }}</span>
         <span class="ml-auto flex items-center gap-1.5"><Icon name="mdilocal:clock-outline" class="w-4 h-4" />{{ formatRelative(repo.updated_at) }}</span>
       </div>

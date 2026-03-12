@@ -31,7 +31,7 @@
                 <p class="text-xs text-muted truncate">{{ user?.email }}</p>
               </div>
               <NuxtLink :to="myReposHref" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-2" @click="menuOpen=false">
-                <Icon name="mdilocal:source-repository" class="w-4 h-4" /> Repositories
+                <Icon name="mdilocal:repo-clone" class="w-4 h-4" /> Repositories
               </NuxtLink>
               <NuxtLink to="/user/settings" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-2" @click="menuOpen=false">
                 <Icon name="mdilocal:cog-outline" class="w-4 h-4" /> Settings

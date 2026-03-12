@@ -27,7 +27,7 @@
           </NuxtLink>
           <NuxtLink to="/admin/users" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:account-group-outline" class="w-4 h-4 text-accent-2" /> Manage Users</NuxtLink>
           <NuxtLink to="/admin/statistics" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:chart-line" class="w-4 h-4 text-accent-2" /> View Statistics</NuxtLink>
-          <NuxtLink to="/admin/repos" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:source-repository" class="w-4 h-4 text-accent-2" /> Manage Repositories</NuxtLink>
+          <NuxtLink to="/admin/repos" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:repo-clone" class="w-4 h-4 text-accent-2" /> Manage Repositories</NuxtLink>
           <NuxtLink to="/admin/ads" class="flex items-center gap-2 p-3 rounded-md hover:bg-surface-2 transition-colors text-sm"><Icon name="mdilocal:advertisements" class="w-4 h-4 text-accent-2" /> Manage Ads</NuxtLink>
         </div>
       </div>
@@ -55,7 +55,7 @@ const { data: stats, pending } = await useAsyncData(
 )
 const statCards = computed(() => [
   { label: 'Total Users',   value: stats.value?.total_users || 0,     icon: 'mdilocal:account-group-outline', color: 'bg-accent-2/10 text-accent-2' },
-  { label: 'Repositories',  value: stats.value?.total_repos || 0,     icon: 'mdilocal:source-repository',     color: 'bg-success/10 text-success' },
+  { label: 'Repositories',  value: stats.value?.total_repos || 0,     icon: 'mdilocal:repo-clone',     color: 'bg-success/10 text-success' },
   { label: 'Files',         value: stats.value?.total_files || 0,     icon: 'mdilocal:file-multiple-outline',  color: 'bg-accent/10 text-accent' },
   { label: 'Pending Review',value: stats.value?.pending_verifications || 0, icon: 'mdilocal:shield-check-outline', color: 'bg-warning/10 text-warning' },
   { label: 'Banned Users',  value: stats.value?.banned_users || 0,    icon: 'mdilocal:account-cancel-outline', color: 'bg-danger/10 text-danger' },

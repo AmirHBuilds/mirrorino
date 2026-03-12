@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-start justify-between gap-2 mb-2">
       <div class="flex items-center gap-2 min-w-0">
-        <Icon name="mdilocal:source-repository" class="w-4 h-4 text-accent-2 shrink-0" />
+        <Icon name="mdilocal:repo-clone" class="w-4 h-4 text-accent-2 shrink-0" />
         <span class="font-medium text-sm truncate">
           <button class="text-muted hover:underline" @click.stop.prevent="navigateTo(`/${repo.owner.username}/repos`)">{{ repo.owner.username }}</button>
           <span class="text-muted">/</span>
@@ -31,7 +31,7 @@
     <div class="flex items-center gap-4 text-xs text-muted font-mono">
       <span class="flex items-center gap-1"><Icon name="mdilocal:file-multiple-outline" class="w-3.5 h-3.5" />{{ repo.file_count }} files</span>
       <span class="flex items-center gap-1"><Icon name="mdilocal:download-outline" class="w-3.5 h-3.5" />{{ repo.download_count.toLocaleString() }}</span>
-      <span class="hidden sm:flex items-center gap-1"><Icon name="mdilocal:source-repository" class="w-3.5 h-3.5" />{{ repo.clone_count.toLocaleString() }}</span>
+      <span class="hidden sm:flex items-center gap-1"><Icon name="mdilocal:repo-clone" class="w-3.5 h-3.5" />{{ repo.clone_count.toLocaleString() }}</span>
       <span class="flex items-center gap-1"><Icon name="mdilocal:database-outline" class="w-3.5 h-3.5" />{{ formatBytes(repo.total_size) }}</span>
       <span class="ml-auto flex items-center gap-1"><Icon name="mdilocal:clock-outline" class="w-3.5 h-3.5" />{{ formatRelative(repo.created_at) }}</span>
     </div>
