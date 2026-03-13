@@ -20,6 +20,8 @@ export interface Repo {
   verification_status: 'unverified' | 'pending' | 'verified' | 'rejected'
   download_count: number
   clone_count: number
+  is_mirror: boolean
+  source_url: string | null
   file_count: number
   total_size: number
   owner: { id: number; username: string; role: string; created_at: string }

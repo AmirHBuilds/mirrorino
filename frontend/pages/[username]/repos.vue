@@ -30,7 +30,8 @@
               <span class="text-xs font-mono text-muted border border-border px-1.5 py-0.5 rounded">{{ repo.is_public ? 'Public' : 'Private' }}</span>
             </div>
             <p v-if="repo.description" class="text-xs text-muted truncate">{{ repo.description }}</p>
-            <div class="flex items-center gap-4 mt-2 text-xs text-muted font-mono">
+            <MirrorSourceBox :repo="repo" class="mt-3" />
+            <div class="flex items-center gap-4 mt-3 text-xs text-muted font-mono">
               <span>{{ repo.file_count }} files</span>
               <span>{{ formatBytes(repo.total_size) }}</span>
               <span>{{ formatRelative(repo.updated_at) }}</span>
@@ -38,18 +39,15 @@
           </div>
           <div v-if="isOwner" class="flex items-center gap-1 shrink-0">
             <button @click.stop="goToUpload(repo)" class="btn-ghost py-1 px-2 text-xs">Upload</button>
-            <button @click.stop="openEdit(repo)" class="btn-ghost py-1 px-2 text-xs">
-              <Icon name="mdilocal:pencil-outline" class="w-3.5 h-3.5" /> Edit
-            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="showCreate" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" @click.self="showCreate=false">
-      <div class="card p-6 w-full max-w-md">
+    <div v-if="showCreate" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4" @click.self="showCreate=false">
+      <div class="card p-6 w-full max-w-2xl border border-border/80 shadow-2xl shadow-black/30">
         <h2 class="text-lg font-semibold mb-4">New repository</h2>
-        <div class="space-y-3">
+        <div class="space-y-4">
           <div>
             <label class="text-xs text-muted block mb-1.5">Repository name</label>
             <input v-model="newRepo.name" class="input" placeholder="my-cool-tool" />
@@ -58,6 +56,31 @@
             <label class="text-xs text-muted block mb-1.5">Description (optional)</label>
             <input v-model="newRepo.description" class="input" placeholder="What is this repo for?" />
           </div>
+
+          <div class="rounded-xl border border-border bg-surface-2/30 p-4 transition-all duration-300">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-medium">Is this a mirror?</p>
+                <p class="text-xs text-muted">Let users know this repo mirrors another source repository.</p>
+              </div>
+              <button
+                type="button"
+                class="relative h-6 w-11 rounded-full transition-colors duration-300"
+                :class="newRepo.is_mirror ? 'bg-accent-2' : 'bg-surface-3'"
+                @click="toggleMirror"
+              >
+                <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" :class="newRepo.is_mirror ? 'translate-x-5' : 'translate-x-0.5'" />
+              </button>
+            </div>
+            <Transition name="fade-slide">
+              <div v-if="newRepo.is_mirror" class="mt-4">
+                <label class="text-xs text-muted block mb-1.5">Main source URL</label>
+                <input v-model="newRepo.source_url" class="input" placeholder="https://github.com/publisher/repo" />
+                <MirrorSourceBox :repo="mirrorPreviewRepo" class="mt-3" />
+              </div>
+            </Transition>
+          </div>
+
           <div class="text-xs text-muted bg-surface-2/70 border border-border rounded px-3 py-2">
             Private repositories are disabled for self-service accounts.
             <NuxtLink to="/contact" class="text-accent-2 hover:underline">Contact support</NuxtLink>
@@ -73,8 +96,6 @@
         </div>
       </div>
     </div>
-
-
   </div>
 </template>
 
@@ -84,7 +105,7 @@ import type { Repo } from '~/types'
 import { visibleVerificationStatus, type VerificationStatus } from '~/utils/repo'
 
 const route = useRoute()
-const { get, post, put } = useApi()
+const { get, post } = useApi()
 const { user, fetchUser } = useAuth()
 const username = computed(() => String(route.params.username || ''))
 
@@ -105,15 +126,41 @@ const { data: repos, pending, refresh } = await useAsyncData(
 const showCreate = ref(false)
 const creating = ref(false)
 const createError = ref('')
-const newRepo = reactive({ name: '', description: '', is_public: true })
+const newRepo = reactive({ name: '', description: '', is_public: true, is_mirror: false, source_url: '' })
+
+const mirrorPreviewRepo = computed<Repo>(() => ({
+  id: 0,
+  name: newRepo.name || 'mirror-preview',
+  slug: 'mirror-preview',
+  description: newRepo.description || null,
+  is_public: true,
+  verification_status: 'unverified',
+  download_count: 0,
+  clone_count: 0,
+  is_mirror: newRepo.is_mirror,
+  source_url: newRepo.source_url || null,
+  owner: { id: 0, username: user.value?.username || 'you', role: 'user', created_at: '' },
+  file_count: 0,
+  total_size: 0,
+  created_at: '',
+  updated_at: '',
+}))
+
+function toggleMirror() {
+  newRepo.is_mirror = !newRepo.is_mirror
+  if (!newRepo.is_mirror) newRepo.source_url = ''
+}
 
 async function createRepo() {
   creating.value = true
   createError.value = ''
   try {
-    await post('/api/repos/', { ...newRepo })
+    await post('/api/repos/', {
+      ...newRepo,
+      source_url: newRepo.is_mirror ? newRepo.source_url : null,
+    })
     showCreate.value = false
-    Object.assign(newRepo, { name: '', description: '', is_public: true })
+    Object.assign(newRepo, { name: '', description: '', is_public: true, is_mirror: false, source_url: '' })
     await refresh()
   } catch (e: any) {
     createError.value = e.message
@@ -126,10 +173,17 @@ function goToUpload(repo: Repo) {
   navigateTo(`/user/repos/${repo.owner.username}/${repo.slug}/upload`)
 }
 
-
-
-
-
-
 useSeoMeta({ title: computed(() => `${username.value} repos`) })
 </script>
+
+<style scoped>
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.28s ease;
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+</style>

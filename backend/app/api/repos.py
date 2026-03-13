@@ -53,6 +53,10 @@ async def list_public_repos(
 @router.post("/", response_model=RepoResponse, status_code=201)
 async def create_new_repo(data: RepoCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     data.is_public = True
+    if data.is_mirror and not data.source_url:
+        raise HTTPException(status_code=400, detail="Mirror repositories must include a source URL")
+    if not data.is_mirror:
+        data.source_url = None
     repo = await create_repo(data, current_user, db)
     return await _enrich(repo, db)
 
@@ -112,7 +116,20 @@ async def update_repo(repo_id: int, data: RepoUpdate, db: AsyncSession = Depends
         repo.description = data.description
     if data.is_public is not None and data.is_public is False:
         raise HTTPException(status_code=400, detail="Private repositories are only available via support")
-    if data.is_public is not None: repo.is_public = True
+    if data.is_public is not None:
+        repo.is_public = True
+
+    if "is_mirror" in data.model_fields_set and data.is_mirror is not None:
+        repo.is_mirror = data.is_mirror
+        if not repo.is_mirror:
+            repo.source_url = None
+
+    if "source_url" in data.model_fields_set:
+        repo.source_url = data.source_url if repo.is_mirror else None
+
+    if repo.is_mirror and not repo.source_url:
+        raise HTTPException(status_code=400, detail="Mirror repositories must include a source URL")
+
     return await _enrich(repo, db)
 
 @router.delete("/{repo_id}")
