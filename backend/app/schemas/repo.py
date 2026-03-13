@@ -4,10 +4,25 @@ from app.models.repo import VerificationStatus
 from app.schemas.user import UserPublic
 import re
 
+
+def _valid_source_url(v: str | None) -> str | None:
+    if v is None:
+        return None
+    value = v.strip()
+    if not value:
+        return None
+    if len(value) > 2000:
+        raise ValueError("Source URL is too long")
+    if not re.match(r"^https?://", value, re.IGNORECASE):
+        raise ValueError("Source URL must start with http:// or https://")
+    return value
+
 class RepoCreate(BaseModel):
     name: str
     description: str | None = None
     is_public: bool = True
+    is_mirror: bool = False
+    source_url: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -16,10 +31,17 @@ class RepoCreate(BaseModel):
             raise ValueError("Repo name must be 1-100 chars, letters/numbers/-_. only")
         return v
 
+    @field_validator("source_url")
+    @classmethod
+    def source_url_valid(cls, v: str | None):
+        return _valid_source_url(v)
+
 class RepoUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     is_public: bool | None = None
+    is_mirror: bool | None = None
+    source_url: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -30,6 +52,11 @@ class RepoUpdate(BaseModel):
             raise ValueError("Repo name must be 1-100 chars, letters/numbers/-_. only")
         return v
 
+    @field_validator("source_url")
+    @classmethod
+    def source_url_valid(cls, v: str | None):
+        return _valid_source_url(v)
+
 class RepoResponse(BaseModel):
     id: int
     name: str
@@ -39,6 +66,8 @@ class RepoResponse(BaseModel):
     verification_status: VerificationStatus
     download_count: int
     clone_count: int
+    is_mirror: bool
+    source_url: str | None
     owner: UserPublic
     file_count: int = 0
     total_size: int = 0
