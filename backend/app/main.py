@@ -30,6 +30,21 @@ async def _initialize_database():
         try:
             await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text("ALTER TABLE repos ADD COLUMN IF NOT EXISTS clone_count INTEGER NOT NULL DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE user_messages ADD COLUMN IF NOT EXISTS recipient_user_id INTEGER"))
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_messages_recipient_user_id ON user_messages (recipient_user_id)"))
+            await conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint
+                        WHERE conname = 'fk_user_messages_recipient_user_id_users'
+                    ) THEN
+                        ALTER TABLE user_messages
+                        ADD CONSTRAINT fk_user_messages_recipient_user_id_users
+                        FOREIGN KEY (recipient_user_id) REFERENCES users(id) ON DELETE SET NULL;
+                    END IF;
+                END$$;
+            """))
         finally:
             await conn.execute(text("SELECT pg_advisory_unlock(:lock_id)"), {"lock_id": STARTUP_LOCK_ID})
 

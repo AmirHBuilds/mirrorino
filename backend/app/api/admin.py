@@ -12,9 +12,11 @@ from app.models.file import File
 from app.models.plan import Plan
 from app.models.repo import Repo, VerificationStatus
 from app.models.user import User, UserRole
+from app.models.user_message import UserMessage, UserMessageAck
 from app.schemas.admin import AdminAnalyticsResponse, AdminPermissionsPayload, AdminUserCreate, AdminUserSummary
 from app.schemas.repo import AdminRepoUpdate, AdminVerifyAction, RepoResponse
 from app.schemas.user import UserAdminUpdate, UserProfile
+from app.schemas.user_message import UserMessageCreate, UserMessageResponse, UserMessageStatus, UserMessageUpdate
 from app.services.repo_service import delete_repo_and_free_storage, apply_verification_bonus, remove_verification_bonus
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -377,3 +379,141 @@ async def admin_delete_repo(repo_id: int, db: AsyncSession = Depends(get_db), _=
     owner_r = await db.execute(select(User).where(User.id == repo.owner_id))
     freed = await delete_repo_and_free_storage(repo, owner_r.scalar_one(), db)
     return {"message": "Repository deleted", "storage_freed_bytes": freed}
+
+
+@router.get("/user-messages", response_model=list[UserMessageStatus])
+async def list_user_messages(db: AsyncSession = Depends(get_db), _=Depends(require_admin_permission("manage_users"))):
+    total_users = (await db.execute(select(func.count(User.id)).where(User.role == UserRole.USER))).scalar() or 0
+
+    ack_counts_subquery = (
+        select(UserMessageAck.message_id.label("message_id"), func.count(UserMessageAck.id).label("acknowledged_users"))
+        .join(User, User.id == UserMessageAck.user_id)
+        .where(User.role == UserRole.USER)
+        .group_by(UserMessageAck.message_id)
+        .subquery()
+    )
+
+    recipient_alias = User.__table__.alias("recipient")
+    rows = (
+        await db.execute(
+            select(
+                UserMessage,
+                recipient_alias.c.username.label("recipient_username"),
+                func.coalesce(ack_counts_subquery.c.acknowledged_users, 0).label("acknowledged_users"),
+            )
+            .outerjoin(ack_counts_subquery, ack_counts_subquery.c.message_id == UserMessage.id)
+            .outerjoin(recipient_alias, recipient_alias.c.id == UserMessage.recipient_user_id)
+            .order_by(UserMessage.created_at.desc())
+        )
+    ).all()
+
+    output: list[UserMessageStatus] = []
+    for message, recipient_username, acknowledged_users in rows:
+        total_targets = 1 if message.recipient_user_id else total_users
+        pending_users = max(0, total_targets - acknowledged_users)
+        output.append(
+            UserMessageStatus(
+                id=message.id,
+                title=message.title,
+                body=message.body,
+                is_active=message.is_active,
+                created_by=message.created_by,
+                recipient_user_id=message.recipient_user_id,
+                recipient_username=recipient_username,
+                created_at=message.created_at,
+                updated_at=message.updated_at,
+                acknowledged_users=acknowledged_users,
+                pending_users=pending_users,
+            )
+        )
+    return output
+
+
+@router.post("/user-messages", response_model=UserMessageResponse, status_code=201)
+async def create_user_message(
+    data: UserMessageCreate,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+    _=Depends(require_admin_permission("manage_users")),
+):
+    recipient = None
+    recipient_user_id = data.recipient_user_id or None
+    if recipient_user_id is not None:
+        recipient = (await db.execute(select(User).where(User.id == recipient_user_id))).scalar_one_or_none()
+        if not recipient:
+            raise HTTPException(status_code=404, detail="Recipient user not found")
+
+    message = UserMessage(
+        title=data.title.strip(),
+        body=data.body.strip(),
+        is_active=data.is_active,
+        created_by=current_admin.id,
+        recipient_user_id=recipient_user_id,
+    )
+    db.add(message)
+    await db.flush()
+    return UserMessageResponse(
+        id=message.id,
+        title=message.title,
+        body=message.body,
+        is_active=message.is_active,
+        created_by=message.created_by,
+        recipient_user_id=message.recipient_user_id,
+        recipient_username=recipient.username if recipient else None,
+        created_at=message.created_at,
+        updated_at=message.updated_at,
+    )
+
+
+@router.put("/user-messages/{message_id}", response_model=UserMessageResponse)
+async def update_user_message(
+    message_id: int,
+    data: UserMessageUpdate,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_admin_permission("manage_users")),
+):
+    result = await db.execute(select(UserMessage).where(UserMessage.id == message_id))
+    message = result.scalar_one_or_none()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    if data.title is not None:
+        message.title = data.title.strip()
+    if data.body is not None:
+        message.body = data.body.strip()
+    if data.is_active is not None:
+        message.is_active = data.is_active
+
+    if data.recipient_user_id is not None:
+        recipient_user_id = data.recipient_user_id or None
+        if recipient_user_id is not None:
+            recipient = (await db.execute(select(User).where(User.id == recipient_user_id))).scalar_one_or_none()
+            if not recipient:
+                raise HTTPException(status_code=404, detail="Recipient user not found")
+        message.recipient_user_id = recipient_user_id
+    await db.flush()
+
+    recipient_username = None
+    if message.recipient_user_id:
+        recipient_username = (await db.execute(select(User.username).where(User.id == message.recipient_user_id))).scalar_one_or_none()
+
+    return UserMessageResponse(
+        id=message.id,
+        title=message.title,
+        body=message.body,
+        is_active=message.is_active,
+        created_by=message.created_by,
+        recipient_user_id=message.recipient_user_id,
+        recipient_username=recipient_username,
+        created_at=message.created_at,
+        updated_at=message.updated_at,
+    )
+
+
+@router.delete("/user-messages/{message_id}", status_code=204)
+async def delete_user_message(message_id: int, db: AsyncSession = Depends(get_db), _=Depends(require_admin_permission("manage_users"))):
+    result = await db.execute(select(UserMessage).where(UserMessage.id == message_id))
+    message = result.scalar_one_or_none()
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    await db.delete(message)
