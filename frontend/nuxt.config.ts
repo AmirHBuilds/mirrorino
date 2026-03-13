@@ -13,6 +13,7 @@ export default defineNuxtConfig({
     fallbackToApi: false,
     customCollections: [
       { prefix: 'mdilocal', dir: './icons/mdi' },
+      { prefix: 'mirror-platforms', dir: './icons/platforms' },
     ],
   },
   colorMode: {

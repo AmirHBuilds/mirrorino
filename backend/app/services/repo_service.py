@@ -26,7 +26,15 @@ async def create_repo(data: RepoCreate, owner: User, db: AsyncSession) -> Repo:
     result = await db.execute(select(Repo).where(Repo.owner_id == owner.id, Repo.slug == slug))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="You already have a repo with this name")
-    repo = Repo(owner_id=owner.id, name=data.name, slug=slug, description=data.description, is_public=data.is_public)
+    repo = Repo(
+        owner_id=owner.id,
+        name=data.name,
+        slug=slug,
+        description=data.description,
+        is_public=data.is_public,
+        is_mirror=data.is_mirror,
+        source_url=data.source_url if data.is_mirror else None,
+    )
     db.add(repo)
     await db.flush()
     return repo
