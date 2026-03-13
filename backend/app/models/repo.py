@@ -22,6 +22,8 @@ class Repo(Base):
     verification_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     clone_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_mirror: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     owner = relationship("User", back_populates="repos", lazy="selectin")

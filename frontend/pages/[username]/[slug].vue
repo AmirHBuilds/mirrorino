@@ -28,6 +28,7 @@
             </span>
           </div>
           <p v-if="repo.description" class="text-sm text-muted">{{ repo.description }}</p>
+          <MirrorSourceBox :repo="repo" class="mt-4 max-w-3xl" />
         </div>
         <div class="flex items-center gap-2 shrink-0" v-if="isOwner">
           <button v-if="repo.verification_status === 'unverified'" @click="requestVerify" class="btn-secondary text-sm py-1.5">
@@ -181,6 +182,28 @@
                 <textarea v-model="repoEditForm.description" class="input pl-9 min-h-[100px] resize-y" placeholder="What is this repo for?" />
               </div>
             </div>
+            <div class="rounded-xl border border-border bg-surface-2/30 p-4 transition-all duration-300">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-medium">Mirror repository</p>
+                  <p class="text-xs text-muted">Enable this if this repo mirrors another source platform.</p>
+                </div>
+                <button
+                  type="button"
+                  class="relative h-6 w-11 rounded-full transition-colors duration-300"
+                  :class="repoEditForm.is_mirror ? 'bg-accent-2' : 'bg-surface-3'"
+                  @click="repoEditForm.is_mirror = !repoEditForm.is_mirror"
+                >
+                  <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" :class="repoEditForm.is_mirror ? 'translate-x-5' : 'translate-x-0.5'" />
+                </button>
+              </div>
+              <Transition name="fade-slide">
+                <div v-if="repoEditForm.is_mirror" class="mt-4">
+                  <label class="text-xs text-muted block mb-1.5">Main source URL</label>
+                  <input v-model="repoEditForm.source_url" class="input" placeholder="https://github.com/publisher/repository" />
+                </div>
+              </Transition>
+            </div>
             <p v-if="repoEditError" class="text-xs text-danger bg-danger/10 border border-danger/30 rounded px-3 py-2">{{ repoEditError }}</p>
             <div class="flex justify-end gap-2">
               <button class="btn-secondary text-sm py-1.5" @click="closeRepoDetailsEdit" :disabled="savingRepoDetails">Cancel</button>
@@ -251,8 +274,8 @@ const deleteRepoError = ref('')
 const showRepoEditModal = ref(false)
 const savingRepoDetails = ref(false)
 const repoEditError = ref('')
-const repoEditForm = reactive({ name: '', description: '' })
-const repoOriginalDetails = reactive({ name: '', description: '' })
+const repoEditForm = reactive({ name: '', description: '', is_mirror: false, source_url: '' })
+const repoOriginalDetails = reactive({ name: '', description: '', is_mirror: false, source_url: '' })
 
 const { data: repo, pending, refresh: refreshRepo } = await useAsyncData(
   () => `repo-detail:${route.params.username}:${route.params.slug}`,
@@ -610,7 +633,10 @@ async function createDirectory() {
 
 
 const hasRepoDetailsChanges = computed(() => (
-  repoEditForm.name !== repoOriginalDetails.name || repoEditForm.description !== repoOriginalDetails.description
+  repoEditForm.name !== repoOriginalDetails.name
+  || repoEditForm.description !== repoOriginalDetails.description
+  || repoEditForm.is_mirror !== repoOriginalDetails.is_mirror
+  || repoEditForm.source_url !== repoOriginalDetails.source_url
 ))
 
 function openRepoDetailsEdit() {
@@ -618,7 +644,11 @@ function openRepoDetailsEdit() {
   repoEditForm.name = repo.value.name
   repoEditForm.description = repo.value.description || ''
   repoOriginalDetails.name = repo.value.name
+  repoEditForm.is_mirror = repo.value.is_mirror
+  repoEditForm.source_url = repo.value.source_url || ''
   repoOriginalDetails.description = repo.value.description || ''
+  repoOriginalDetails.is_mirror = repo.value.is_mirror
+  repoOriginalDetails.source_url = repo.value.source_url || ''
   repoEditError.value = ''
   showRepoEditModal.value = true
 }
@@ -637,6 +667,8 @@ async function saveRepoDetailsEdit() {
     const updated = await put<Repo>(`/api/repos/${repo.value.id}`, {
       name: repoEditForm.name,
       description: repoEditForm.description || null,
+      is_mirror: repoEditForm.is_mirror,
+      source_url: repoEditForm.is_mirror ? (repoEditForm.source_url || null) : null,
     })
     showRepoEditModal.value = false
     repo.value = updated
@@ -709,3 +741,15 @@ async function onDeleteDirectory(path: string) {
 
 useSeoMeta({ title: computed(() => `${route.params.username}/${route.params.slug}`) })
 </script>
+
+<style scoped>
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.28s ease;
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+</style>

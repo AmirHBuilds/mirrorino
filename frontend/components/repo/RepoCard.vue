@@ -27,6 +27,8 @@
       Download at your own risk — unverified repository
     </div>
 
+    <MirrorSourceBox :repo="repo" class="mb-3" />
+
     <!-- Stats -->
     <div class="flex items-center gap-4 text-xs text-muted font-mono">
       <span class="flex items-center gap-1"><Icon name="mdilocal:file-multiple-outline" class="w-3.5 h-3.5" />{{ repo.file_count }} files</span>
