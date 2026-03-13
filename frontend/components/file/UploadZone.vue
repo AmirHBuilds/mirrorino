@@ -5,11 +5,16 @@
       :class="isDragging ? 'border-accent-2 bg-accent-2/5' : ''"
       @dragenter="isDragging=true" @dragleave="isDragging=false">
       <Icon name="mdilocal:cloud-upload-outline" class="w-10 h-10 text-muted mx-auto mb-3" />
-      <p class="text-sm text-fg mb-1">Drop files here or <span class="text-accent-2">browse</span></p>
-      <div class="flex items-center justify-center gap-2 mt-3">
-        <button type="button" @click.stop="fileInputRef?.click()" class="btn-secondary text-xs">Select files</button>
-        <button type="button" @click.stop="folderInputRef?.click()" class="btn-secondary text-xs">Select folder</button>
+      <p class="text-sm text-fg mb-1">Drop files or folders here, or <span class="text-accent-2">browse</span></p>
+
+      <div class="relative inline-block mt-3" @click.stop>
+        <button type="button" class="btn-secondary text-xs" @click="togglePickerMenu">Select files / folder</button>
+        <div v-if="showPickerMenu" class="absolute left-1/2 -translate-x-1/2 z-20 mt-2 w-44 card py-1 text-left shadow-lg">
+          <button type="button" class="w-full px-3 py-2 text-xs hover:bg-surface-2" @click="openFilePicker">Select files</button>
+          <button type="button" class="w-full px-3 py-2 text-xs hover:bg-surface-2" @click="openFolderPicker">Select folder</button>
+        </div>
       </div>
+
       <p class="text-xs text-muted">Max 500MB per file · Some unsafe binaries are blocked</p>
       <input ref="fileInputRef" type="file" multiple class="hidden" @change="onSelectFiles" />
       <input ref="folderInputRef" type="file" multiple webkitdirectory directory class="hidden" @change="onSelectFolder" />
@@ -53,9 +58,21 @@ const emit  = defineEmits<{ uploaded: [] }>()
 
 const { uploadFile } = useApi()
 const isDragging = ref(false)
+const showPickerMenu = ref(false)
 const fileInputRef = ref<HTMLInputElement>()
 const folderInputRef = ref<HTMLInputElement>()
 const processing = ref(false)
+
+interface WebkitFileSystemEntry {
+  isFile: boolean
+  isDirectory: boolean
+  name: string
+  fullPath: string
+  file: (cb: (file: File) => void, err?: (error: unknown) => void) => void
+  createReader: () => {
+    readEntries: (cb: (entries: WebkitFileSystemEntry[]) => void, err?: (error: unknown) => void) => void
+  }
+}
 
 interface QueueItem {
   id: string
@@ -69,24 +86,99 @@ interface QueueItem {
 }
 const queue = ref<QueueItem[]>([])
 
-function onDrop(e: DragEvent) {
+function togglePickerMenu() {
+  showPickerMenu.value = !showPickerMenu.value
+}
+
+function openFilePicker() {
+  showPickerMenu.value = false
+  fileInputRef.value?.click()
+}
+
+function openFolderPicker() {
+  showPickerMenu.value = false
+  folderInputRef.value?.click()
+}
+
+const closePickerMenu = () => {
+  showPickerMenu.value = false
+}
+
+onMounted(() => {
+  window.addEventListener('click', closePickerMenu)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', closePickerMenu)
+})
+
+async function onDrop(e: DragEvent) {
   isDragging.value = false
-  const files = Array.from(e.dataTransfer?.files || [])
-  uploadAll(files.map((file) => ({ file, directoryPath: '' })))
+  const dropped = await getDroppedFiles(e)
+  uploadAll(dropped)
 }
 
 function onSelectFiles(e: Event) {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files || [])
   uploadAll(files.map((file) => ({ file, directoryPath: '' })))
-  input.value = ""
+  input.value = ''
 }
 
 function onSelectFolder(e: Event) {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files || [])
   uploadAll(files.map((file) => ({ file, directoryPath: getRelativeDirectory(file) })))
-  input.value = ""
+  input.value = ''
+}
+
+async function getDroppedFiles(e: DragEvent): Promise<Array<{ file: File; directoryPath: string }>> {
+  const items = Array.from(e.dataTransfer?.items || [])
+  const supportsEntries = items.some((item) => typeof (item as DataTransferItem & { webkitGetAsEntry?: () => WebkitFileSystemEntry | null }).webkitGetAsEntry === 'function')
+
+  if (!supportsEntries) {
+    const files = Array.from(e.dataTransfer?.files || [])
+    return files.map((file) => ({ file, directoryPath: '' }))
+  }
+
+  const collected: Array<{ file: File; directoryPath: string }> = []
+  for (const item of items) {
+    const entry = (item as DataTransferItem & { webkitGetAsEntry?: () => WebkitFileSystemEntry | null }).webkitGetAsEntry?.()
+    if (!entry) continue
+    const entryFiles = await readEntryFiles(entry)
+    collected.push(...entryFiles)
+  }
+  return collected
+}
+
+async function readEntryFiles(entry: WebkitFileSystemEntry, parent = ''): Promise<Array<{ file: File; directoryPath: string }>> {
+  const currentPath = normalizePath([parent, entry.name].filter(Boolean).join('/'))
+
+  if (entry.isFile) {
+    const file = await new Promise<File>((resolve, reject) => entry.file(resolve, reject))
+    return [{ file, directoryPath: normalizePath(parent) }]
+  }
+
+  if (!entry.isDirectory) return []
+
+  const reader = entry.createReader()
+  const children = await readAllDirectoryEntries(reader)
+  const nested = await Promise.all(children.map((child) => readEntryFiles(child, currentPath)))
+  return nested.flat()
+}
+
+async function readAllDirectoryEntries(reader: { readEntries: (cb: (entries: WebkitFileSystemEntry[]) => void, err?: (error: unknown) => void) => void }): Promise<WebkitFileSystemEntry[]> {
+  const entries: WebkitFileSystemEntry[] = []
+
+  while (true) {
+    const chunk = await new Promise<WebkitFileSystemEntry[]>((resolve, reject) => {
+      reader.readEntries(resolve, reject)
+    })
+    if (!chunk.length) break
+    entries.push(...chunk)
+  }
+
+  return entries
 }
 
 function getRelativeDirectory(file: File): string {
