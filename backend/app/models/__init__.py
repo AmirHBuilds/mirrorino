@@ -6,3 +6,4 @@ from app.models.ad import Ad
 from app.models.directory import Directory
 
 from app.models.admin_permission import AdminPermission
+from app.models.user_message import UserMessage, UserMessageAck

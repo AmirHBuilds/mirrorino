@@ -39,7 +39,10 @@ const nav = computed(() => {
     items.push({ to: '/admin/verify', icon: 'mdilocal:shield-check-outline', label: 'Verify Queue', badge: stats.value?.pending_verifications || undefined })
     items.push({ to: '/admin/repos', icon: 'mdilocal:repo-clone', label: 'Repositories' })
   }
-  if (permissions.value?.manage_users) items.push({ to: '/admin/users', icon: 'mdilocal:account-group-outline', label: 'Users' })
+  if (permissions.value?.manage_users) {
+    items.push({ to: '/admin/users', icon: 'mdilocal:account-group-outline', label: 'Users' })
+    items.push({ to: '/admin/messages', icon: 'mdilocal:message-alert-outline', label: 'User Messages' })
+  }
   if (permissions.value?.manage_ads) items.push({ to: '/admin/ads', icon: 'mdilocal:advertisements', label: 'Ads' })
   return items
 })
