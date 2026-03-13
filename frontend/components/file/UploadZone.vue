@@ -1,14 +1,18 @@
 <template>
   <div>
-    <div @dragover.prevent @drop.prevent="onDrop" @click="inputRef?.click()"
+    <div @dragover.prevent @drop.prevent="onDrop" @click="fileInputRef?.click()"
       class="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-accent-2 transition-colors"
       :class="isDragging ? 'border-accent-2 bg-accent-2/5' : ''"
       @dragenter="isDragging=true" @dragleave="isDragging=false">
       <Icon name="mdilocal:cloud-upload-outline" class="w-10 h-10 text-muted mx-auto mb-3" />
       <p class="text-sm text-fg mb-1">Drop files here or <span class="text-accent-2">browse</span></p>
-      <button type="button" @click.stop="inputRef?.click()" class="btn-secondary text-xs mt-3">Select files</button>
+      <div class="flex items-center justify-center gap-2 mt-3">
+        <button type="button" @click.stop="fileInputRef?.click()" class="btn-secondary text-xs">Select files</button>
+        <button type="button" @click.stop="folderInputRef?.click()" class="btn-secondary text-xs">Select folder</button>
+      </div>
       <p class="text-xs text-muted">Max 500MB per file · Some unsafe binaries are blocked</p>
-      <input ref="inputRef" type="file" multiple class="hidden" @change="onSelect" />
+      <input ref="fileInputRef" type="file" multiple class="hidden" @change="onSelectFiles" />
+      <input ref="folderInputRef" type="file" multiple webkitdirectory directory class="hidden" @change="onSelectFolder" />
     </div>
 
     <!-- Upload queue -->
@@ -49,13 +53,15 @@ const emit  = defineEmits<{ uploaded: [] }>()
 
 const { uploadFile } = useApi()
 const isDragging = ref(false)
-const inputRef   = ref<HTMLInputElement>()
+const fileInputRef = ref<HTMLInputElement>()
+const folderInputRef = ref<HTMLInputElement>()
 const processing = ref(false)
 
 interface QueueItem {
   id: string
   file: File
   name: string
+  directoryPath: string
   progress: number
   status: 'queued' | 'uploading' | 'done' | 'error'
   error?: string
@@ -66,14 +72,32 @@ const queue = ref<QueueItem[]>([])
 function onDrop(e: DragEvent) {
   isDragging.value = false
   const files = Array.from(e.dataTransfer?.files || [])
-  uploadAll(files)
+  uploadAll(files.map((file) => ({ file, directoryPath: '' })))
 }
 
-function onSelect(e: Event) {
+function onSelectFiles(e: Event) {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files || [])
-  uploadAll(files)
+  uploadAll(files.map((file) => ({ file, directoryPath: '' })))
   input.value = ""
+}
+
+function onSelectFolder(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  uploadAll(files.map((file) => ({ file, directoryPath: getRelativeDirectory(file) })))
+  input.value = ""
+}
+
+function getRelativeDirectory(file: File): string {
+  const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath || ''
+  if (!relative || !relative.includes('/')) return ''
+  const withoutName = relative.slice(0, relative.lastIndexOf('/'))
+  return normalizePath(withoutName)
+}
+
+function normalizePath(path: string): string {
+  return path.split('/').filter(Boolean).join('/')
 }
 
 function removeFromQueue(id: string) {
@@ -83,13 +107,14 @@ function removeFromQueue(id: string) {
   queue.value = queue.value.filter((entry) => entry.id !== id)
 }
 
-function uploadAll(files: File[]) {
+function uploadAll(files: Array<{ file: File; directoryPath: string }>) {
   if (!files.length) return
-  for (const file of files) {
+  for (const { file, directoryPath } of files) {
     const item = reactive<QueueItem>({
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       file,
-      name: file.name,
+      name: directoryPath ? `${directoryPath}/${file.name}` : file.name,
+      directoryPath,
       progress: 0,
       status: 'queued',
     })
@@ -110,7 +135,8 @@ async function processQueue() {
       item.status = 'uploading'
       const fd = new FormData()
       fd.append('file', item.file)
-      fd.append('directory_path', props.directoryPath || '')
+      const targetDirectory = normalizePath([props.directoryPath || '', item.directoryPath].filter(Boolean).join('/'))
+      fd.append('directory_path', targetDirectory)
 
       try {
         await uploadFile(`/api/users/${props.repoUsername}/repos/${props.repoSlug}/files`, fd, (pct) => { item.progress = pct })
