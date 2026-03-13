@@ -104,6 +104,8 @@ export interface AdminUserMessage {
   body: string
   is_active: boolean
   created_by: number | null
+  recipient_user_id: number | null
+  recipient_username: string | null
   created_at: string
   updated_at: string
   acknowledged_users: number

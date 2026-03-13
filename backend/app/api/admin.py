@@ -393,20 +393,24 @@ async def list_user_messages(db: AsyncSession = Depends(get_db), _=Depends(requi
         .subquery()
     )
 
+    recipient_alias = User.__table__.alias("recipient")
     rows = (
         await db.execute(
             select(
                 UserMessage,
+                recipient_alias.c.username.label("recipient_username"),
                 func.coalesce(ack_counts_subquery.c.acknowledged_users, 0).label("acknowledged_users"),
             )
             .outerjoin(ack_counts_subquery, ack_counts_subquery.c.message_id == UserMessage.id)
+            .outerjoin(recipient_alias, recipient_alias.c.id == UserMessage.recipient_user_id)
             .order_by(UserMessage.created_at.desc())
         )
     ).all()
 
     output: list[UserMessageStatus] = []
-    for message, acknowledged_users in rows:
-        pending_users = max(0, total_users - acknowledged_users)
+    for message, recipient_username, acknowledged_users in rows:
+        total_targets = 1 if message.recipient_user_id else total_users
+        pending_users = max(0, total_targets - acknowledged_users)
         output.append(
             UserMessageStatus(
                 id=message.id,
@@ -414,6 +418,8 @@ async def list_user_messages(db: AsyncSession = Depends(get_db), _=Depends(requi
                 body=message.body,
                 is_active=message.is_active,
                 created_by=message.created_by,
+                recipient_user_id=message.recipient_user_id,
+                recipient_username=recipient_username,
                 created_at=message.created_at,
                 updated_at=message.updated_at,
                 acknowledged_users=acknowledged_users,
@@ -430,10 +436,33 @@ async def create_user_message(
     current_admin: User = Depends(get_current_admin),
     _=Depends(require_admin_permission("manage_users")),
 ):
-    message = UserMessage(title=data.title.strip(), body=data.body.strip(), is_active=data.is_active, created_by=current_admin.id)
+    recipient = None
+    recipient_user_id = data.recipient_user_id or None
+    if recipient_user_id is not None:
+        recipient = (await db.execute(select(User).where(User.id == recipient_user_id))).scalar_one_or_none()
+        if not recipient:
+            raise HTTPException(status_code=404, detail="Recipient user not found")
+
+    message = UserMessage(
+        title=data.title.strip(),
+        body=data.body.strip(),
+        is_active=data.is_active,
+        created_by=current_admin.id,
+        recipient_user_id=recipient_user_id,
+    )
     db.add(message)
     await db.flush()
-    return message
+    return UserMessageResponse(
+        id=message.id,
+        title=message.title,
+        body=message.body,
+        is_active=message.is_active,
+        created_by=message.created_by,
+        recipient_user_id=message.recipient_user_id,
+        recipient_username=recipient.username if recipient else None,
+        created_at=message.created_at,
+        updated_at=message.updated_at,
+    )
 
 
 @router.put("/user-messages/{message_id}", response_model=UserMessageResponse)
@@ -454,8 +483,31 @@ async def update_user_message(
         message.body = data.body.strip()
     if data.is_active is not None:
         message.is_active = data.is_active
+
+    if data.recipient_user_id is not None:
+        recipient_user_id = data.recipient_user_id or None
+        if recipient_user_id is not None:
+            recipient = (await db.execute(select(User).where(User.id == recipient_user_id))).scalar_one_or_none()
+            if not recipient:
+                raise HTTPException(status_code=404, detail="Recipient user not found")
+        message.recipient_user_id = recipient_user_id
     await db.flush()
-    return message
+
+    recipient_username = None
+    if message.recipient_user_id:
+        recipient_username = (await db.execute(select(User.username).where(User.id == message.recipient_user_id))).scalar_one_or_none()
+
+    return UserMessageResponse(
+        id=message.id,
+        title=message.title,
+        body=message.body,
+        is_active=message.is_active,
+        created_by=message.created_by,
+        recipient_user_id=message.recipient_user_id,
+        recipient_username=recipient_username,
+        created_at=message.created_at,
+        updated_at=message.updated_at,
+    )
 
 
 @router.delete("/user-messages/{message_id}", status_code=204)

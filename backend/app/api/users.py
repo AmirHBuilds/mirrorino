@@ -47,7 +47,7 @@ async def get_my_messages(db: AsyncSession = Depends(get_db), current_user: User
     messages = (
         await db.execute(
             select(UserMessage)
-            .where(UserMessage.is_active == True)
+            .where(UserMessage.is_active == True, (UserMessage.recipient_user_id == None) | (UserMessage.recipient_user_id == current_user.id))
             .order_by(UserMessage.created_at.desc())
         )
     ).scalars().all()
@@ -67,6 +67,8 @@ async def get_my_messages(db: AsyncSession = Depends(get_db), current_user: User
             body=message.body,
             is_active=message.is_active,
             created_by=message.created_by,
+            recipient_user_id=message.recipient_user_id,
+            recipient_username=None,
             created_at=message.created_at,
             updated_at=message.updated_at,
             acknowledged=message.id in acked_ids,
@@ -77,7 +79,15 @@ async def get_my_messages(db: AsyncSession = Depends(get_db), current_user: User
 
 @router.post("/me/messages/{message_id}/acknowledge", response_model=UserMessageAckResponse)
 async def acknowledge_message(message_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    message = (await db.execute(select(UserMessage).where(UserMessage.id == message_id, UserMessage.is_active == True))).scalar_one_or_none()
+    message = (
+        await db.execute(
+            select(UserMessage).where(
+                UserMessage.id == message_id,
+                UserMessage.is_active == True,
+                (UserMessage.recipient_user_id == None) | (UserMessage.recipient_user_id == current_user.id),
+            )
+        )
+    ).scalar_one_or_none()
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
 
