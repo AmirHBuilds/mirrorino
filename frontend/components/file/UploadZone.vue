@@ -5,7 +5,7 @@
       :class="isDragging ? 'border-accent-2 bg-accent-2/5' : ''"
       @dragenter="isDragging=true" @dragleave="isDragging=false">
       <Icon name="mdilocal:cloud-upload-outline" class="w-10 h-10 text-muted mx-auto mb-3" />
-      <p class="text-sm text-fg mb-1">Drop files or folders here, or browse</p>
+      <p class="text-sm text-fg mb-1">Drop files here, or browse</p>
 
       <div class="flex items-center justify-center gap-2 mt-3">
         <button type="button" class="btn-secondary text-xs" @click="openFilePicker">Select files</button>
@@ -89,10 +89,10 @@ function openFolderPicker() {
   folderInputRef.value?.click()
 }
 
-async function onDrop(e: DragEvent) {
+function onDrop(e: DragEvent) {
   isDragging.value = false
-  const dropped = await getDroppedFiles(e)
-  uploadAll(dropped)
+  const files = Array.from(e.dataTransfer?.files || [])
+  uploadAll(files.map((file) => ({ file, directoryPath: '' })))
 }
 
 function onSelectFiles(e: Event) {
@@ -107,55 +107,6 @@ function onSelectFolder(e: Event) {
   const files = Array.from(input.files || [])
   uploadAll(files.map((file) => ({ file, directoryPath: getRelativeDirectory(file) })))
   input.value = ''
-}
-
-async function getDroppedFiles(e: DragEvent): Promise<Array<{ file: File; directoryPath: string }>> {
-  const items = Array.from(e.dataTransfer?.items || [])
-  const supportsEntries = items.some((item) => typeof (item as DataTransferItem & { webkitGetAsEntry?: () => WebkitFileSystemEntry | null }).webkitGetAsEntry === 'function')
-
-  if (!supportsEntries) {
-    const files = Array.from(e.dataTransfer?.files || [])
-    return files.map((file) => ({ file, directoryPath: '' }))
-  }
-
-  const collected: Array<{ file: File; directoryPath: string }> = []
-  for (const item of items) {
-    const entry = (item as DataTransferItem & { webkitGetAsEntry?: () => WebkitFileSystemEntry | null }).webkitGetAsEntry?.()
-    if (!entry) continue
-    const entryFiles = await readEntryFiles(entry)
-    collected.push(...entryFiles)
-  }
-  return collected
-}
-
-async function readEntryFiles(entry: WebkitFileSystemEntry, parent = ''): Promise<Array<{ file: File; directoryPath: string }>> {
-  const currentPath = normalizePath([parent, entry.name].filter(Boolean).join('/'))
-
-  if (entry.isFile) {
-    const file = await new Promise<File>((resolve, reject) => entry.file(resolve, reject))
-    return [{ file, directoryPath: normalizePath(parent) }]
-  }
-
-  if (!entry.isDirectory) return []
-
-  const reader = entry.createReader()
-  const children = await readAllDirectoryEntries(reader)
-  const nested = await Promise.all(children.map((child) => readEntryFiles(child, currentPath)))
-  return nested.flat()
-}
-
-async function readAllDirectoryEntries(reader: { readEntries: (cb: (entries: WebkitFileSystemEntry[]) => void, err?: (error: unknown) => void) => void }): Promise<WebkitFileSystemEntry[]> {
-  const entries: WebkitFileSystemEntry[] = []
-
-  while (true) {
-    const chunk = await new Promise<WebkitFileSystemEntry[]>((resolve, reject) => {
-      reader.readEntries(resolve, reject)
-    })
-    if (!chunk.length) break
-    entries.push(...chunk)
-  }
-
-  return entries
 }
 
 function getRelativeDirectory(file: File): string {
