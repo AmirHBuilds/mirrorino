@@ -1,24 +1,29 @@
 <template>
   <div>
-    <div @dragover.prevent @drop.prevent="onDrop" @click="inputRef?.click()"
-      class="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-accent-2 transition-colors"
+    <div @dragover.prevent @drop.prevent="onDrop"
+      class="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-accent-2 transition-colors"
       :class="isDragging ? 'border-accent-2 bg-accent-2/5' : ''"
       @dragenter="isDragging=true" @dragleave="isDragging=false">
       <Icon name="mdilocal:cloud-upload-outline" class="w-10 h-10 text-muted mx-auto mb-3" />
-      <p class="text-sm text-fg mb-1">Drop files here or <span class="text-accent-2">browse</span></p>
-      <button type="button" @click.stop="inputRef?.click()" class="btn-secondary text-xs mt-3">Select files</button>
+      <p class="text-sm text-fg mb-1">Drop files or folders here, or browse</p>
+
+      <div class="flex items-center justify-center gap-2 mt-3">
+        <button type="button" class="btn-secondary text-xs" @click="openFilePicker">Select files</button>
+        <button type="button" class="btn-secondary text-xs" @click="openFolderPicker">Select folder</button>
+      </div>
+
       <p class="text-xs text-muted">Max 500MB per file · Some unsafe binaries are blocked</p>
-      <input ref="inputRef" type="file" multiple class="hidden" @change="onSelect" />
+      <input ref="fileInputRef" type="file" multiple class="hidden" @change="onSelectFiles" />
+      <input ref="folderInputRef" type="file" multiple webkitdirectory directory class="hidden" @change="onSelectFolder" />
     </div>
 
-    <!-- Upload queue -->
     <div v-if="queue.length" class="mt-3 space-y-2">
       <TransitionGroup name="upload-log" tag="div" class="space-y-2">
       <div v-for="item in queue" :key="item.id" class="card px-3 py-2">
         <div class="flex items-center justify-between mb-1.5 gap-2">
           <span class="text-xs font-mono truncate max-w-xs">{{ item.name }}</span>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono" :class="item.status === 'error' ? 'text-danger' : item.status === 'done' ? 'text-success' : item.status === 'queued' ? 'text-muted' : 'text-muted'">
+            <span class="text-xs font-mono" :class="item.status === 'error' ? 'text-danger' : item.status === 'done' ? 'text-success' : 'text-muted'">
               {{ item.status === 'error' ? item.error : item.status === 'done' ? '✓ Done' : item.status === 'queued' ? 'Queued' : `${item.progress}%` }}
             </span>
             <button
@@ -49,13 +54,26 @@ const emit  = defineEmits<{ uploaded: [] }>()
 
 const { uploadFile } = useApi()
 const isDragging = ref(false)
-const inputRef   = ref<HTMLInputElement>()
+const fileInputRef = ref<HTMLInputElement>()
+const folderInputRef = ref<HTMLInputElement>()
 const processing = ref(false)
+
+interface WebkitFileSystemEntry {
+  isFile: boolean
+  isDirectory: boolean
+  name: string
+  fullPath: string
+  file: (cb: (file: File) => void, err?: (error: unknown) => void) => void
+  createReader: () => {
+    readEntries: (cb: (entries: WebkitFileSystemEntry[]) => void, err?: (error: unknown) => void) => void
+  }
+}
 
 interface QueueItem {
   id: string
   file: File
   name: string
+  directoryPath: string
   progress: number
   status: 'queued' | 'uploading' | 'done' | 'error'
   error?: string
@@ -63,17 +81,92 @@ interface QueueItem {
 }
 const queue = ref<QueueItem[]>([])
 
-function onDrop(e: DragEvent) {
-  isDragging.value = false
-  const files = Array.from(e.dataTransfer?.files || [])
-  uploadAll(files)
+function openFilePicker() {
+  fileInputRef.value?.click()
 }
 
-function onSelect(e: Event) {
+function openFolderPicker() {
+  folderInputRef.value?.click()
+}
+
+async function onDrop(e: DragEvent) {
+  isDragging.value = false
+  const dropped = await getDroppedFiles(e)
+  uploadAll(dropped)
+}
+
+function onSelectFiles(e: Event) {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files || [])
-  uploadAll(files)
-  input.value = ""
+  uploadAll(files.map((file) => ({ file, directoryPath: '' })))
+  input.value = ''
+}
+
+function onSelectFolder(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  uploadAll(files.map((file) => ({ file, directoryPath: getRelativeDirectory(file) })))
+  input.value = ''
+}
+
+async function getDroppedFiles(e: DragEvent): Promise<Array<{ file: File; directoryPath: string }>> {
+  const items = Array.from(e.dataTransfer?.items || [])
+  const supportsEntries = items.some((item) => typeof (item as DataTransferItem & { webkitGetAsEntry?: () => WebkitFileSystemEntry | null }).webkitGetAsEntry === 'function')
+
+  if (!supportsEntries) {
+    const files = Array.from(e.dataTransfer?.files || [])
+    return files.map((file) => ({ file, directoryPath: '' }))
+  }
+
+  const collected: Array<{ file: File; directoryPath: string }> = []
+  for (const item of items) {
+    const entry = (item as DataTransferItem & { webkitGetAsEntry?: () => WebkitFileSystemEntry | null }).webkitGetAsEntry?.()
+    if (!entry) continue
+    const entryFiles = await readEntryFiles(entry)
+    collected.push(...entryFiles)
+  }
+  return collected
+}
+
+async function readEntryFiles(entry: WebkitFileSystemEntry, parent = ''): Promise<Array<{ file: File; directoryPath: string }>> {
+  const currentPath = normalizePath([parent, entry.name].filter(Boolean).join('/'))
+
+  if (entry.isFile) {
+    const file = await new Promise<File>((resolve, reject) => entry.file(resolve, reject))
+    return [{ file, directoryPath: normalizePath(parent) }]
+  }
+
+  if (!entry.isDirectory) return []
+
+  const reader = entry.createReader()
+  const children = await readAllDirectoryEntries(reader)
+  const nested = await Promise.all(children.map((child) => readEntryFiles(child, currentPath)))
+  return nested.flat()
+}
+
+async function readAllDirectoryEntries(reader: { readEntries: (cb: (entries: WebkitFileSystemEntry[]) => void, err?: (error: unknown) => void) => void }): Promise<WebkitFileSystemEntry[]> {
+  const entries: WebkitFileSystemEntry[] = []
+
+  while (true) {
+    const chunk = await new Promise<WebkitFileSystemEntry[]>((resolve, reject) => {
+      reader.readEntries(resolve, reject)
+    })
+    if (!chunk.length) break
+    entries.push(...chunk)
+  }
+
+  return entries
+}
+
+function getRelativeDirectory(file: File): string {
+  const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath || ''
+  if (!relative || !relative.includes('/')) return ''
+  const withoutName = relative.slice(0, relative.lastIndexOf('/'))
+  return normalizePath(withoutName)
+}
+
+function normalizePath(path: string): string {
+  return path.split('/').filter(Boolean).join('/')
 }
 
 function removeFromQueue(id: string) {
@@ -83,13 +176,14 @@ function removeFromQueue(id: string) {
   queue.value = queue.value.filter((entry) => entry.id !== id)
 }
 
-function uploadAll(files: File[]) {
+function uploadAll(files: Array<{ file: File; directoryPath: string }>) {
   if (!files.length) return
-  for (const file of files) {
+  for (const { file, directoryPath } of files) {
     const item = reactive<QueueItem>({
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       file,
-      name: file.name,
+      name: directoryPath ? `${directoryPath}/${file.name}` : file.name,
+      directoryPath,
       progress: 0,
       status: 'queued',
     })
@@ -110,7 +204,8 @@ async function processQueue() {
       item.status = 'uploading'
       const fd = new FormData()
       fd.append('file', item.file)
-      fd.append('directory_path', props.directoryPath || '')
+      const targetDirectory = normalizePath([props.directoryPath || '', item.directoryPath].filter(Boolean).join('/'))
+      fd.append('directory_path', targetDirectory)
 
       try {
         await uploadFile(`/api/users/${props.repoUsername}/repos/${props.repoSlug}/files`, fd, (pct) => { item.progress = pct })
@@ -130,7 +225,6 @@ async function processQueue() {
   }
 }
 </script>
-
 
 <style scoped>
 .upload-log-enter-active,
