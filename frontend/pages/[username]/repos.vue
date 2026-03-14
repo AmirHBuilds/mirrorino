@@ -65,11 +65,14 @@
               </div>
               <button
                 type="button"
-                class="relative h-6 w-11 rounded-full transition-colors duration-300"
+                class="relative h-6 w-11 rounded-full overflow-hidden transition-colors duration-300"
                 :class="newRepo.is_mirror ? 'bg-accent-2' : 'bg-surface-3'"
                 @click="toggleMirror"
               >
-                <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" :class="newRepo.is_mirror ? 'translate-x-5' : 'translate-x-0.5'" />
+                <span
+                  class="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all duration-300"
+                  :class="newRepo.is_mirror ? 'left-[1.375rem]' : 'left-0.5'"
+                />
               </button>
             </div>
             <Transition name="fade-slide">
