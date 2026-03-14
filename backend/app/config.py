@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     VERIFICATION_BONUS_BYTES: int = 2_147_483_648
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 14
+    REFRESH_COOKIE_SECURE: bool = True
+    REFRESH_COOKIE_SAMESITE: str = "lax"
     ALGORITHM: str = "HS256"
 
     MAX_UPLOAD_PER_HOUR: int = 10

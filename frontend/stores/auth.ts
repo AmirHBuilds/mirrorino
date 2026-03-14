@@ -24,7 +24,16 @@ export const useAuthStore = defineStore('auth', {
       if (process.client) localStorage.setItem('token', token)
       await this.fetchUser()
     },
-    logout() {
+    async logout() {
+      try {
+        const config = useRuntimeConfig()
+        await fetch(`${config.public.apiBase}/api/auth/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+      } catch {
+        // Ignore network errors during best-effort logout.
+      }
       this.user = null
       this.token = null
       useCookie<string | null>('token').value = null
@@ -38,13 +47,14 @@ export const useAuthStore = defineStore('auth', {
         if (!token) return
         const res = await fetch(`${config.public.apiBase}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
         })
         if (res.ok) {
           this.user = await res.json()
           this.token = token
           useCookie<string | null>('token').value = token
         } else {
-          if (res.status === 401 || res.status === 403) this.logout()
+          if (res.status === 401 || res.status === 403) await this.logout()
         }
       } catch {
         // Keep existing session on transient network issues.

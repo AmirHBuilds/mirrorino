@@ -1,17 +1,51 @@
+let refreshPromise: Promise<string | null> | null = null
+
 export function useApi() {
   const config = useRuntimeConfig()
   const base = config.public.apiBase
   const tokenCookie = useCookie<string | null>('token')
 
-  async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  async function refreshAccessToken(): Promise<string | null> {
+    if (!refreshPromise) {
+      refreshPromise = (async () => {
+        const res = await fetch(`${base}/api/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        if (!res.ok) {
+          tokenCookie.value = null
+          if (process.client) localStorage.removeItem('token')
+          return null
+        }
+        const data = await res.json() as { access_token: string }
+        tokenCookie.value = data.access_token
+        if (process.client) localStorage.setItem('token', data.access_token)
+        return data.access_token
+      })().finally(() => {
+        refreshPromise = null
+      })
+    }
+    return refreshPromise
+  }
+
+  async function request<T>(path: string, options: RequestInit = {}, allowRetry = true): Promise<T> {
     const token = tokenCookie.value || (process.client ? localStorage.getItem('token') : null)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string> || {}),
+      ...((options.headers as Record<string, string>) || {}),
     }
-    if (token) headers['Authorization'] = `Bearer ${token}`
+    if (token) headers.Authorization = `Bearer ${token}`
 
-    const res = await fetch(`${base}${path}`, { ...options, headers })
+    const res = await fetch(`${base}${path}`, { ...options, headers, credentials: 'include' })
+
+    if ((res.status === 401 || res.status === 403) && allowRetry && path !== '/api/auth/refresh' && path !== '/api/auth/login') {
+      const newToken = await refreshAccessToken()
+      if (newToken) {
+        return request<T>(path, options, false)
+      }
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Request failed' }))
       throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail))
@@ -31,6 +65,7 @@ export function useApi() {
         const token = tokenCookie.value || localStorage.getItem('token')
         const xhr = new XMLHttpRequest()
         xhr.open('POST', `${base}${path}`)
+        xhr.withCredentials = true
         if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
         if (onProgress) {
           xhr.upload.onprogress = (e) => {
