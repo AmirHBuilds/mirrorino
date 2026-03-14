@@ -32,6 +32,7 @@ async def _initialize_database():
             await conn.execute(text("ALTER TABLE repos ADD COLUMN IF NOT EXISTS clone_count INTEGER NOT NULL DEFAULT 0"))
             await conn.execute(text("ALTER TABLE repos ADD COLUMN IF NOT EXISTS is_mirror BOOLEAN NOT NULL DEFAULT FALSE"))
             await conn.execute(text("ALTER TABLE repos ADD COLUMN IF NOT EXISTS source_url TEXT"))
+            await conn.execute(text("ALTER TABLE repos ADD COLUMN IF NOT EXISTS latest_release_version VARCHAR(255)"))
         finally:
             await conn.execute(text("SELECT pg_advisory_unlock(:lock_id)"), {"lock_id": STARTUP_LOCK_ID})
 

@@ -126,13 +126,27 @@ async def list_repo_tree(username: str, repo_slug: str, path: str = "", db: Asyn
             if directory_path == child_path or directory_path.startswith(f"{child_path}/"):
                 directory_sizes[child_path] += size_bytes
 
-    directories = sorted(
-        [
-            RepoTreeDirectory(name=path.split("/")[-1], path=path, size_bytes=directory_sizes[path])
-            for path in child_paths
-        ],
-        key=lambda entry: entry.name.lower(),
-    )
+    latest_release_version = (repo.latest_release_version or "").strip().strip("/")
+
+    directory_items = [
+        RepoTreeDirectory(
+            name=path.split("/")[-1],
+            path=path,
+            size_bytes=directory_sizes[path],
+            is_releases_dir=(not normalized and path.lower() == "releases"),
+            is_latest_release=bool(normalized.lower() == "releases" and latest_release_version and path.split("/")[-1] == latest_release_version),
+        )
+        for path in child_paths
+    ]
+
+    def sort_key(entry: RepoTreeDirectory):
+        if entry.is_releases_dir:
+            return (0, entry.name.lower())
+        if entry.is_latest_release:
+            return (1, entry.name.lower())
+        return (2, entry.name.lower())
+
+    directories = sorted(directory_items, key=sort_key)
 
     return RepoTreeResponse(path=normalized, directories=directories, files=files)
 

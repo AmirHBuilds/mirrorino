@@ -33,6 +33,11 @@ async def get_raw_file(request: Request, username: str, repo_slug: str, filename
         raise HTTPException(status_code=404, detail=f"Repository '{repo_slug}' not found or is private")
 
     normalized = filename.strip("/")
+    latest_release_version = (repo.latest_release_version or "").strip().strip("/")
+    latest_prefix = "releases/latest/"
+    if latest_release_version and normalized.lower().startswith(latest_prefix):
+        normalized = f"releases/{latest_release_version}/{normalized[len(latest_prefix):]}".strip("/")
+
     if "/" in normalized:
         directory_path, original_name = normalized.rsplit("/", 1)
     else:

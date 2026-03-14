@@ -7,6 +7,7 @@ from app.core.security import get_current_user
 from app.models.repo import Repo, VerificationStatus
 from app.models.file import File
 from app.models.user import User
+from app.models.directory import Directory
 from app.schemas.repo import RepoCreate, RepoUpdate, RepoResponse, RepoVerifyRequest
 from app.services.repo_service import create_repo, delete_repo_and_free_storage, rename_repo
 
@@ -130,6 +131,20 @@ async def update_repo(repo_id: int, data: RepoUpdate, db: AsyncSession = Depends
     if repo.is_mirror and not repo.source_url:
         raise HTTPException(status_code=400, detail="Mirror repositories must include a source URL")
 
+    if "latest_release_version" in data.model_fields_set:
+        latest = (data.latest_release_version or "").strip().strip("/") if data.latest_release_version is not None else None
+        if latest:
+            release_dir = f"releases/{latest}"
+            release_result = await db.execute(
+                select(Directory.id)
+                .where(Directory.repo_id == repo.id, Directory.path == release_dir)
+                .limit(1)
+            )
+            has_release_dir = release_result.scalar_one_or_none() is not None
+            if not has_release_dir:
+                raise HTTPException(status_code=400, detail="Latest release folder must exist under releases/")
+
+        repo.latest_release_version = latest
     return await _enrich(repo, db)
 
 @router.delete("/{repo_id}")

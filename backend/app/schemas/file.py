@@ -29,6 +29,8 @@ class RepoTreeDirectory(BaseModel):
     name: str
     path: str
     size_bytes: int
+    is_releases_dir: bool = False
+    is_latest_release: bool = False
 
 
 class RepoTreeResponse(BaseModel):
