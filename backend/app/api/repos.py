@@ -18,6 +18,7 @@ async def _enrich(repo: Repo, db: AsyncSession) -> dict:
     file_count, total_size = stats.one()
     return {
         **repo.__dict__,
+        "latest_release_version": getattr(repo, "latest_release_version", None),
         "owner": repo.owner,
         "file_count": file_count,
         "total_size": total_size,

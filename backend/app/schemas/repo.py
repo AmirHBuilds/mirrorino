@@ -92,7 +92,7 @@ class RepoResponse(BaseModel):
     clone_count: int
     is_mirror: bool
     source_url: str | None
-    latest_release_version: str | None
+    latest_release_version: str | None = None
     owner: UserPublic
     file_count: int = 0
     total_size: int = 0
