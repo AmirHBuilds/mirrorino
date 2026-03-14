@@ -129,7 +129,7 @@
           class="group inline-flex items-center justify-center gap-2 rounded-lg border border-accent-2/40 bg-accent-2/10 px-4 py-2 text-sm font-medium text-accent-2 transition-all hover:-translate-y-0.5 hover:border-accent-2 hover:bg-accent-2/20"
         >
           <Icon name="mdilocal:folder-zip-outline" class="h-4 w-4" />
-          Download repo as ZIP
+          Download
         </a>
         <div class="hidden sm:flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted font-mono shadow-sm">
           <Icon name="mdilocal:console" class="w-4 h-4 shrink-0 text-accent-2" />
