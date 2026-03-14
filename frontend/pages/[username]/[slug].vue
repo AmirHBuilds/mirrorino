@@ -120,8 +120,18 @@
         </div>
       </div>
 
-      <div class="hidden sm:block mt-3">
-        <div class="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted font-mono shadow-sm">
+      <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <a
+          :href="cloneArchiveUrl"
+          :download="cloneDownloadFileName"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="group inline-flex items-center justify-center gap-2 rounded-lg border border-accent-2/40 bg-accent-2/10 px-4 py-2 text-sm font-medium text-accent-2 transition-all hover:-translate-y-0.5 hover:border-accent-2 hover:bg-accent-2/20"
+        >
+          <Icon name="mdilocal:folder-zip-outline" class="h-4 w-4" />
+          Download
+        </a>
+        <div class="hidden sm:flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted font-mono shadow-sm">
           <Icon name="mdilocal:console" class="w-4 h-4 shrink-0 text-accent-2" />
           <span class="truncate">{{ cloneCurlCommand }}</span>
         </div>
@@ -349,6 +359,11 @@ const cloneArchiveUrl = computed(() => {
 const cloneCurlCommand = computed(() => {
   if (!repo.value) return ''
   return `curl -L "${cloneArchiveUrl.value}" -o ${repo.value.slug}.zip`
+})
+
+const cloneDownloadFileName = computed(() => {
+  if (!repo.value) return 'repository.zip'
+  return `${repo.value.slug}.zip`
 })
 
 const readmeFile = computed(() => tree.value?.files?.find((file) => file.original_name.toLowerCase() === 'readme.md' && !file.directory_path) ?? null)
