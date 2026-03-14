@@ -30,7 +30,7 @@
               <span class="text-xs font-mono text-muted border border-border px-1.5 py-0.5 rounded">{{ repo.is_public ? 'Public' : 'Private' }}</span>
             </div>
             <p v-if="repo.description" class="text-xs text-muted truncate">{{ repo.description }}</p>
-            <MirrorSourceBox :repo="repo" compact class="mt-2" />
+            <MirrorSourceBox :repo="repo" compact class="mt-2 w-full md:max-w-[32rem]" />
             <div class="flex items-center gap-4 mt-3 text-xs text-muted font-mono">
               <span>{{ repo.file_count }} files</span>
               <span>{{ formatBytes(repo.total_size) }}</span>

@@ -5,11 +5,16 @@
     :href="isValidLink ? mirrorInfo?.normalizedUrl : undefined"
     :target="isValidLink ? '_blank' : undefined"
     :rel="isValidLink ? 'noopener noreferrer' : undefined"
-    class="group block w-full rounded-lg border px-3 py-2 transition-all duration-200"
-    :class="[platformMeta.boxClass, isValidLink ? 'hover:border-surface-3' : 'opacity-95']"
+    class="group block w-full rounded-xl border px-3.5 py-3 transition-all duration-200"
+    :class="[
+      platformMeta.boxClass,
+      isValidLink
+        ? 'hover:-translate-y-0.5 hover:border-surface-3 hover:shadow-lg hover:shadow-black/10'
+        : 'opacity-95'
+    ]"
   >
     <div class="flex items-center gap-2.5 min-w-0">
-      <span class="w-7 h-7 rounded-md bg-surface/70 border border-border/70 flex items-center justify-center shrink-0">
+      <span class="w-8 h-8 rounded-lg bg-surface/70 border border-border/70 flex items-center justify-center shrink-0">
         <Icon :name="platformMeta.icon" class="w-4 h-4 text-accent-2 shrink-0" />
       </span>
 
