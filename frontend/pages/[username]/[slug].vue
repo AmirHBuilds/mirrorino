@@ -28,7 +28,7 @@
             </span>
           </div>
           <p v-if="repo.description" class="text-sm text-muted">{{ repo.description }}</p>
-          <MirrorSourceBox :repo="repo" class="mt-4 max-w-3xl" />
+          <MirrorSourceBox :repo="repo" class="mt-4 w-full" />
         </div>
         <div class="flex items-center gap-2 shrink-0" v-if="isOwner">
           <button v-if="repo.verification_status === 'unverified'" @click="requestVerify" class="btn-secondary text-sm py-1.5">
